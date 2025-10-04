@@ -658,7 +658,7 @@ function onSuccess(data) {
     const em = document.getElementById("error-message");
     if (em) {
       const stardateHuman = formatDateForUI(parsedStartDate);
-      em.innerHTML = `Wyniki nie są jeszcze dostępne. Sprawdź ${stardateHuman}.`;
+      em.innerHTML = `Wyniki nie są jeszcze dostępne. Sprawdź ${stardateHuman} r.`;
       em.style.display = "block";
     }
     // Upewnij się, że nic nie jest widoczne (już powinno być schowane przez reset powyżej)
