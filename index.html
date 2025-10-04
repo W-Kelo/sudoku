@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KeloSudoku</title>
+  <style>
+    :root {
+      --primary-color: #007BFF;
+      --secondary-color: #4CAF50;
+      --background-color: #f0f2f5;
+      --text-color: #333;
+      --border-color: #888;
+      --bold-border-color: #000;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h1 {
+      color: var(--primary-color);
+    }
+
+    .input-container {
+      margin: 20px 0;
+    }
+
+    .input-container input {
+      padding: 10px;
+      width: calc(100% - 22px);
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    .input-container button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .sudoku-table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 324px;
+      table-layout: fixed;
+    }
+
+    .sudoku-table td {
+      width: 11.11%;
+      padding-top: 11.11%;
+      position: relative;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+      font-weight: bold;
+    }
+    
+    .sudoku-table td span {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .sudoku-table .solution {
+      color: var(--secondary-color);
+    }
+
+    .sudoku-table td.bold-border-bottom {
+      border-bottom: 3px solid var(--bold-border-color);
+    }
+    .sudoku-table td.bold-border-right {
+      border-right: 3px solid var(--bold-border-color);
+    }
+
+    .info-container {
+      text-align: left;
+      margin-top: 20px;
+    }
+    .info-container p {
+      margin: 5px 0;
+    }
+    .info-container strong {
+      color: var(--primary-color);
+    }
+    
+    .error-message {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    /* NOWY STYL DLA WSKAŹNIKA ŁADOWANIA */
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .rating-section {
+  margin: 20px 0;
+  border-top: 1px solid #ccc;
+  padding-top: 15px;
+}
+.rating-section p {
+  margin-bottom: 5px;
+}
+.rating-input-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+  border-radius: 5px;
+}
+.slider:hover {
+  opacity: 1;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  cursor: pointer;
+}
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  cursor: pointer;
+}
+.rating-button {
+  padding: 8px 12px;
+  background-color: var(--secondary-color);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.rating-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>KeloSudoku</h1>
+    <div class="input-container" id="input-screen">
+      <p>Wpisz KeloPlusKod, aby wyświetlić planszę:</p>
+      <input type="text" id="kelo-code" placeholder="Wpisz kod..." />
+      <button onclick="fetchSudoku()">Wyświetl</button>
+    </div>
+
+    <div class="loader" id="loader"></div>
+    <div id="error-message" class="error-message" style="display: none;"></div>
+
+    <div id="sudoku-container" style="display: none;">
+      <p>Plansza:</p>
+      <table class="sudoku-table" id="initial-sudoku-table"></table>
+
+      <p>Rozwiązanie:</p>
+      <table class="sudoku-table" id="solution-sudoku-table"></table>
+
+      <div class="info-container">
+        <p><strong>Poziom trudności:</strong> <span id="difficulty-level"></span></p>
+        <p><strong>Pochodzenie:</strong> <span id="origin"></span></p>
+        <p><strong>Uwagi:</strong> <span id="notes"></span></p>
+      </div>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+</div>
+    
+    <div id="word-search-info" style="display: none;">
+      <h2>Wykreślanka</h2>
+      <p>Wprowadzony kod dotyczy krzyżówki "wykreślanka" z <span id="word-search-origin"></span>.</p>
+      <p>Aby wyświetlić rozwiązanie, <span id="word-search-notes"></span></p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+</div>
+
+    
+    <div id="cypher-puzzle-info" style="display: none;">
+      <h2>Szyfrokrzyżówka</h2>
+      <p>Wprowadzony kod dotyczy "szyfrokrzyżówki" z <span id="cypher-puzzle-origin"></span>.</p>
+      <p>Aby wyświetlić rozwiązanie, <span id="cypher-puzzle-link"></span>.</p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+    </div>
+
+        <div id="sudoku16-info" style="display: none;">
+      <h2>Sudoku 16*16</h2>
+      <p>Wprowadzony kod dotyczy sudoku 16*16 z zeszytu <span id="sudoku16-origin"></span>.</p>
+      <p>Aby wyświetlić rozwiązanie, <span id="sudoku16-link"></span></p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+ </div>
+          <div id="konkurs-info" style="display: none;">
+      <h2>Gratulujemy!</h2>
+      <p>Poprawnie rozwiązałeś sudoku z konkursowe z zeszytu <span id="konkurs-origin"></span>.</p>
+      <p>Aby odebrać nagrodę, <span id="konkurs-link"></span></p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+    </div>
+
+        <div id="wbudowana-sonda-rozmiaru-planszy-info" style="display: none;">
+      <h2>Sonda</h2>
+      <p>Chcemy, aby plansze sudoku miały rozmiar spełaniający oczekiwania rozwiązujących.</p>
+      <p>Prosimy o ocenę rozmiaru planszy w zeszycie <span id="wbudowana-sonda-rozmiaru-planszy-origin"></span>.</p>
+      <p><span id="wbudowana-sonda-rozmiaru-planszy-notes"></span></p>
+<div class="rating-container" style="display: none;">
+  <h3>Twoje oceny:</h3>
+  <div class="rating-section">
+    <p><strong>Wygoda rozwiązywania przy 6 planszach na stronę:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Wygoda rozwiązywania przy 2 planszach na stronę:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+    <div class="rating-section">
+    <p><strong>Wygoda rozwiązywania w zeszycie w formacie A5:</strong> <span class="current-dodatkowy-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider dodatkowy-slider">
+      <span class="dodatkowy-value">5</span>
+      <button onclick="submitRating('dodatkowy')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+</div>
+  </div>
+<script>
+  let keloCodeGlobal = '';
+  let hasRated = false; // Zmienna do śledzenia oddanych głosów
+  let activeSection = null; // nowa globalna zmienna
+  const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.addEventListener('input', (e) => {
+    if (e.target.classList.contains('difficulty-slider')) {
+      e.target.closest('.rating-container').querySelector('.difficulty-value').textContent = e.target.value;
+    }
+    if (e.target.classList.contains('interest-slider')) {
+      e.target.closest('.rating-container').querySelector('.interest-value').textContent = e.target.value;
+    }
+    if (e.target.classList.contains('dodatkowy-slider')) {
+      e.target.closest('.rating-container').querySelector('.dodatkowy-value').textContent = e.target.value;
+    }
+  });
+});
+/**
+ * callApi - próbuje fetch CORS; jeśli nie przejdzie (CORS), fallback do JSONP.
+ * params: obiekt klucz:wartość
+ * zwraca Promise z parsowanym JSON-em
+ */
+function callApi(params) {
+  // zbuduj query string
+  const qs = Object.keys(params).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k])).join('&');
+  const url = GAS_ENDPOINT + '?' + qs;
+
+  // Próba fetch (CORS). Jeśli odpowiedź ok i JSON -> resolve.
+  return fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' })
+    .then(resp => {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      // spróbuj sparsować JSON; jeśli to JSONP to parse się nie uda -> rzuci
+      return resp.text().then(txt => {
+        // jeżeli to JSON (zaczyna się od '{' lub '[') → parse
+        const trimmed = txt.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          return JSON.parse(trimmed);
+        }
+        // inaczej spróbuj usunąć ewentualne callback(...) i sparsować wnętrze
+        const m = trimmed.match(/^[^(]*\(([\s\S]*)\);?$/);
+        if (m && m[1]) {
+          return JSON.parse(m[1]);
+        }
+        throw new Error('Nieznany format odpowiedzi');
+      });
+    })
+    .catch(err => {
+      // fetch nie przeszedł (np. CORS) — próbujemy JSONP
+      return new Promise((resolve, reject) => {
+        const callbackName = 'cb_' + Math.random().toString(36).slice(2);
+        // ustaw timeout na fallback (np. 10s)
+        const timeout = setTimeout(() => {
+          window[callbackName] = () => {}; // no-op
+          reject(new Error('JSONP timeout / CORS blocked'));
+        }, 10000);
+
+        window[callbackName] = function(data) {
+          clearTimeout(timeout);
+          try { resolve(data); } finally { delete window[callbackName]; script.remove(); }
+        };
+
+        // dodaj callback param do URL
+        const jsonpUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'callback=' + callbackName;
+        const script = document.createElement('script');
+        script.src = jsonpUrl;
+        script.onerror = function() {
+          clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+          reject(new Error('JSONP load error'));
+        };
+        document.head.appendChild(script);
+      });
+    });
+}
+
+  function renderSudoku(boardString, containerId, isSolution = false) {
+    const table = document.getElementById(containerId);
+    if (!table) return;
+    table.innerHTML = "";
+    
+    const board = [];
+    for (let i = 0; i < 81; i += 9) {
+      board.push(boardString.substring(i, i + 9).split('').map(Number));
+    }
+
+    board.forEach((row, rowIndex) => {
+      const tr = document.createElement("tr");
+      row.forEach((cell, colIndex) => {
+        const td = document.createElement("td");
+        const span = document.createElement("span");
+        if (cell !== 0) {
+          span.innerText = cell;
+          if (isSolution) {
+              span.classList.add("solution");
+          }
+        }
+        td.appendChild(span);
+        
+        if ((colIndex + 1) % 3 === 0 && colIndex < 8) {
+          td.classList.add("bold-border-right");
+        }
+        if ((rowIndex + 1) % 3 === 0 && rowIndex < 8) {
+          td.classList.add("bold-border-bottom");
+        }
+        
+        tr.appendChild(td);
+      });
+      table.appendChild(tr);
+    });
+  }
+
+  function solveSudoku(board) {
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        if (board[row][col] === 0) {
+          for (let num = 1; num <= 9; num++) {
+            if (isValid(board, row, col, num)) {
+              board[row][col] = num;
+              if (solveSudoku(board)) return true;
+              board[row][col] = 0;
+            }
+          }
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  
+  function isValid(board, row, col, num) {
+    for (let i = 0; i < 9; i++) {
+      if (board[row][i] === num || board[i][col] === num ||
+          board[Math.floor(row / 3) * 3 + Math.floor(i / 3)][Math.floor(col / 3) * 3 + i % 3] === num) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  function decodeSudokuCode(code) {
+    const [difficulty, boardString] = code.split(':');
+    return {
+      difficulty: difficulty,
+      board: boardString
+    };
+  }
+
+ function fetchSudoku() {
+  const keloCode = document.getElementById("kelo-code").value.trim();
+  if (keloCode.length === 0) {
+    alert("Proszę wpisać kod.");
+    return;
+  }
+  // reset UI...
+  document.getElementById("sudoku-container").style.display = "none";
+  document.getElementById("word-search-info").style.display = "none";
+  document.getElementById("cypher-puzzle-info").style.display = "none";
+  document.getElementById("sudoku16-info").style.display = "none";
+  document.getElementById("konkurs-info").style.display = "none";
+  document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
+  document.getElementById("error-message").style.display = "none";
+  document.getElementById("loader").style.display = "block";
+
+  callApi({ action: 'getSudokuData', kelo: keloCode })
+    .then(onSuccess)
+    .catch(function(err) {
+      document.getElementById("loader").style.display = "none";
+      document.getElementById("error-message").innerText = "Błąd: " + err.message;
+      document.getElementById("error-message").style.display = "block";
+    });
+}
+
+
+function onSuccess(data) {
+  console.log("onSuccess — przychodzące data:", data);
+
+  // 1) schowaj loader i error
+  try {
+    const loader = document.getElementById("loader");
+    if (loader) { loader.style.display = "none"; loader.style.opacity = "1"; }
+  } catch(e){}
+
+  try {
+    const em = document.getElementById("error-message");
+    if (em) { em.style.display = "none"; em.innerText = ""; }
+  } catch(e){}
+
+  if (!data) {
+    const em = document.getElementById("error-message");
+    if (em) { em.innerText = "Wystąpił nieoczekiwany błąd. Brak danych."; em.style.display = "block"; }
+    return;
+  }
+  if (data.error) {
+    const em = document.getElementById("error-message");
+    if (em) { em.innerText = data.error; em.style.display = "block"; }
+    return;
+  }
+
+  // normalizuj typ
+  const typeRaw = (data.type || "sudoku").toString().toLowerCase();
+
+  // dostępność wg daty
+  const startDate = data.startDate ? new Date(data.startDate) : null;
+  const today = new Date();
+  if (startDate) startDate.setHours(0,0,0,0);
+  today.setHours(0,0,0,0);
+  const isAvailable = !(startDate && today < startDate);
+
+  // lista sekcji (pewne ukrycie)
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+
+  // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      // usuń wszelkie diagnostyczne paragrafy które mogły zostać dodane wcześniej
+      const diag = el.querySelector('[data-diagnostic="true"]');
+      if (diag) diag.remove();
+      // ukryj sekcję
+      el.hidden = true;
+      el.style.display = "none";
+      el.style.visibility = "hidden";
+      // przywróć ewentualne inline style, ale NIE zmieniaj display na body/html!
+      el.style.opacity = el.style.opacity || "";
+      el.style.zIndex = el.style.zIndex || "";
+    }
+  });
+
+  activeSection = null;
+
+  // helper: pokaż tylko dany element - NIE dotykaj body/html i nie chodź powyżej elementu z klasą .container
+  function showOnlySection(el) {
+    if (!el) return;
+    // pokaż ten element
+    el.hidden = false;
+    el.style.display = "block";
+    el.style.visibility = "visible";
+    el.style.opacity = el.style.opacity || "1";
+
+    // Upewnij się, że jego BEZPOŚREDNI rodzic .container jest widoczny, ale nie modyfikuj body/html
+    let parent = el.parentElement;
+    while (parent && parent.tagName !== 'BODY' && parent.className !== 'container') {
+      // jeśli któryś rodzic był ukryty inline, przywróć go — ale nie ingeruj w body/html
+      parent.hidden = false;
+      if (window.getComputedStyle(parent).display === 'none') parent.style.display = 'block';
+      if (window.getComputedStyle(parent).visibility === 'hidden') parent.style.visibility = 'visible';
+      parent = parent.parentElement;
+    }
+    // jeśli znaleziono .container — upewnij się, że nie zmieniamy display body
+    if (parent && parent.className === 'container') {
+      if (window.getComputedStyle(parent).display === 'none') parent.style.display = 'block';
+      if (window.getComputedStyle(parent).visibility === 'hidden') parent.style.visibility = 'visible';
+    }
+  }
+
+  // helper: set origin/notes
+  function setCommon(originId, notesId, originVal, notesVal) {
+    const o = document.getElementById(originId);
+    const n = document.getElementById(notesId);
+    if (o) o.innerText = originVal || "Brak informacji";
+    if (n) n.innerHTML = parseNotesForLinks(notesVal);
+  }
+
+  try {
+    if (typeRaw === "wordsearch" || typeRaw === "wykreślanka") {
+      activeSection = document.getElementById("word-search-info");
+      showOnlySection(activeSection);
+      setCommon("word-search-origin", "word-search-notes", data.origin, data.notes);
+    } else if (typeRaw === "cypherpuzzle" || typeRaw === "szyfrokrzyzowka" || typeRaw === "cp") {
+      activeSection = document.getElementById("cypher-puzzle-info");
+      showOnlySection(activeSection);
+      setCommon("cypher-puzzle-origin", "cypher-puzzle-link", data.origin, data.notes);
+    } else if (typeRaw === "sudoku16" || typeRaw === "16" || typeRaw === "16x16") {
+      activeSection = document.getElementById("sudoku16-info");
+      showOnlySection(activeSection);
+      setCommon("sudoku16-origin", "sudoku16-link", data.origin, data.notes);
+    } else if (typeRaw === "konkurs") {
+      activeSection = document.getElementById("konkurs-info");
+      showOnlySection(activeSection);
+      setCommon("konkurs-origin", "konkurs-link", data.origin, data.notes);
+    } else if (typeRaw === "wbudowana-sonda-rozmiaru-planszy") {
+      activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
+      showOnlySection(activeSection);
+      setCommon("wbudowana-sonda-rozmiaru-planszy-origin", "wbudowana-sonda-rozmiaru-planszy-link", data.origin, data.notes);
+    } else {
+      // sudoku 9x9
+      activeSection = document.getElementById("sudoku-container");
+      showOnlySection(activeSection);
+
+      const codeVal = (data.code !== undefined && data.code !== null) ? String(data.code) : "";
+      const decoded = decodeSudokuCode(codeVal);
+      const initialBoardString = (decoded && decoded.board) ? decoded.board : codeVal;
+      const difficulty = (decoded && decoded.difficulty) ? decoded.difficulty : "";
+
+      if (initialBoardString && initialBoardString.length === 81) {
+        const boardToSolve = [];
+        for (let i = 0; i < 81; i += 9) {
+          boardToSolve.push(initialBoardString.substring(i, i + 9).split("").map(Number));
+        }
+        try { solveSudoku(boardToSolve); } catch(e){ console.warn("solveSudoku error", e); }
+        const solvedBoardString = boardToSolve.flat().join("");
+        renderSudoku(initialBoardString, "initial-sudoku-table");
+        renderSudoku(solvedBoardString, "solution-sudoku-table", true);
+        document.getElementById("difficulty-level") && (document.getElementById("difficulty-level").innerText = difficulty);
+        document.getElementById("origin") && (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+        document.getElementById("notes") && (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+      } else {
+        const em = document.getElementById("error-message");
+        if (em) { em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 znaków)"; em.style.display = "block"; }
+        // nie ustawiamy activeSection bo nie mamy co pokazywać w sudoku-container
+        activeSection = null;
+      }
+    }
+  } catch(e){
+    console.error("Błąd w onSuccess branch:", e);
+    const em = document.getElementById("error-message");
+    if (em) { em.innerText = "Błąd wewnętrzny."; em.style.display = "block"; }
+    activeSection = null;
+  }
+
+  // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cs = window.getComputedStyle(el);
+    if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+      console.log("VISIBLE SECTION:", id, { display: cs.display, visibility: cs.visibility, offsetWidth: el.offsetWidth, offsetHeight: el.offsetHeight });
+    } else {
+      console.log("HIDDEN SECTION:", id, { display: cs.display, visibility: cs.visibility });
+    }
+  });
+
+  // ratingy (tylko dla activeSection)
+  try {
+    keloCodeGlobal = (document.getElementById("kelo-code") && document.getElementById("kelo-code").value) ? document.getElementById("kelo-code").value.trim() : "";
+    if (activeSection) {
+      const ratingContainer = activeSection.querySelector(".rating-container");
+      if (ratingContainer) {
+        if (isAvailable) {
+          ratingContainer.style.display = "block";
+          ratingContainer.hidden = false;
+          ratingContainer.style.visibility = "visible";
+          try { ratingContainer.querySelector(".current-difficulty-rating").innerText = (!isNaN(parseFloat(data.difficultyRating)) ? parseFloat(data.difficultyRating).toFixed(2) : "Brak ocen"); } catch(e){}
+          try { ratingContainer.querySelector(".current-interest-rating").innerText = (!isNaN(parseFloat(data.interestRating)) ? parseFloat(data.interestRating).toFixed(2) : "Brak ocen"); } catch(e){}
+          try { ratingContainer.querySelector(".current-dodatkowy-rating").innerText = (!isNaN(parseFloat(data.dodatkowyRating)) ? parseFloat(data.dodatkowyRating).toFixed(2) : "Brak ocen"); } catch(e){}
+          hasRated = keloCodeGlobal ? (localStorage.getItem(`rated_${keloCodeGlobal}`) === "true") : false;
+          if (hasRated) disableRatingButtons(ratingContainer); else enableRatingButtons(ratingContainer);
+        } else {
+          ratingContainer.style.display = "none";
+          ratingContainer.hidden = true;
+          ratingContainer.style.visibility = "hidden";
+        }
+      }
+    }
+  } catch(e){ console.warn("rating handling error", e); }
+
+  // jeśli nic nie ustawiono - pokaż komunikat
+  try {
+    const em = document.getElementById("error-message");
+    if (!activeSection && em && !em.innerText) {
+      em.innerText = "Brak danych do wyświetlenia dla tego typu łamigłówki.";
+      em.style.display = "block";
+    }
+  } catch(e){}
+}
+
+
+
+
+
+function submitRating(ratingType) {
+  if (hasRated) {
+    if (activeSection) {
+      activeSection.querySelector('.rating-message').innerText = 'Już oceniłeś tę łamigłówkę.';
+    }
+    return;
+  }
+  if (!activeSection) return;
+
+  const slider = activeSection.querySelector(`.${ratingType}-slider`);
+  const rating = slider ? parseInt(slider.value, 10) : null;
+
+  if (!rating) {
+    activeSection.querySelector('.rating-message').innerText = 'Proszę wybrać ocenę.';
+    return;
+  }
+
+  activeSection.querySelector('.rating-message').innerText = 'Wysyłanie oceny...';
+
+  callApi({ action: 'submitRating', kelo: keloCodeGlobal, ratingType: ratingType, rating: rating })
+    .then(onRatingSuccess)
+    .catch(function(err) {
+      activeSection.querySelector('.rating-message').innerText = 'Błąd: ' + err.message;
+    });
+}
+
+
+function onRatingSuccess(response) {
+  if (!activeSection) return;
+
+  if (!response) {
+    activeSection.querySelector('.rating-message').innerText =
+      'Wysyłam...';
+    return;
+  }
+
+  if (response.error) {
+    activeSection.querySelector('.rating-message').innerText =
+      'Błąd przy zapisywaniu oceny: ' + response.error;
+    return;
+  }
+
+  activeSection.querySelector('.rating-message').innerText =
+    'Ocena zapisana. Dziękujemy!';
+  activeSection.querySelector('.current-difficulty-rating').innerText =
+    !isNaN(response.difficultyRating)
+      ? parseFloat(response.difficultyRating).toFixed(2)
+      : 'Brak ocen';
+  activeSection.querySelector('.current-interest-rating').innerText =
+    !isNaN(response.interestRating)
+      ? parseFloat(response.interestRating).toFixed(2)
+      : 'Brak ocen';
+  activeSection.querySelector('.current-dodatkowy-rating').innerText =
+    !isNaN(response.dodatkowyRating)
+      ? parseFloat(response.dodatkowyRating).toFixed(2)
+      : 'Brak ocen';
+
+
+  hasRated = true;
+  localStorage.setItem(`rated_${keloCodeGlobal}`, 'true');
+  disableRatingButtons(activeSection);
+}
+
+
+
+
+function disableRatingButtons(section) {
+  section.querySelectorAll('.rating-button').forEach(btn => btn.disabled = true);
+}
+
+function enableRatingButtons(section) {
+  section.querySelectorAll('.rating-button').forEach(btn => btn.disabled = false);
+}
+
+
+  function onFailure(error) {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("sudoku-container").style.display = "none";
+    document.getElementById("word-search-info").style.display = "none";
+    document.getElementById("cypher-puzzle-info").style.display = "none";
+    document.getElementById("sudoku16-info").style.display = "none";
+    document.getElementById("konkurs-info").style.display = "none";
+    document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
+    document.getElementById("error-message").innerText = "Błąd: " + error.message;
+    document.getElementById("error-message").style.display = "block";
+  }
+
+  function parseNotesForLinks(notes) {
+    let notesText = notes || "";
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return notesText.replace(urlRegex, function(url) {
+      return `<a href="${url}" target="_blank">kliknij tutaj</a>`;
+    });
+  }
+
+  function getTypeInfo(type) {
+    switch(type) {
+      case 'sudoku': return { name: 'Sudoku' };
+      case 'wordsearch': return { name: 'Wykreślanka' };
+      case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
+      case 'sudoku16': return { name: 'Sudoku 16*16' };
+      case 'konkurs': return { name: 'Konkurs' };
+      case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
+      default: return { name: 'Łamigłówka' };
+    }
+  }
+</script>
+</body>
+</html>
