@@ -581,12 +581,53 @@ function onSuccess(data) {
   // normalizuj typ
   const typeRaw = (data.type || "sudoku").toString().toLowerCase();
 
-  // dostępność wg daty
-  const startDate = data.startDate ? new Date(data.startDate) : null;
+  // --- bezpieczne parsowanie startDate i obliczenie dostępności ---
+  // data.startDate może być null, pustym stringiem, stringiem "YYYY-MM-DD" itp.
+  function parseDateOnly(value) {
+    if (!value && value !== 0) return null; // null/undefined/'' => brak daty
+    // Jeśli to już Date - sprawdź poprawność
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : new Date(value.getFullYear(), value.getMonth(), value.getDate());
+    }
+    // Jeśli to liczba (timestamp)
+    if (!isNaN(Number(value)) && String(value).length > 4) {
+      const d = new Date(Number(value));
+      return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+    // Spróbuj sparsować format YYYY-MM-DD bez czasów (bez przesunięć strefy)
+    // split zamiast new Date('YYYY-MM-DD') by uniknąć problemów z UTC.
+    const s = String(value).trim();
+    const ymd = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (ymd) {
+      const y = parseInt(ymd[1], 10), m = parseInt(ymd[2], 10) - 1, d = parseInt(ymd[3], 10);
+      const dd = new Date(y, m, d);
+      return isNaN(dd.getTime()) ? null : dd;
+    }
+    // Ostatnia deska ratunku: spróbuj new Date, ale zweryfikuj
+    const tryD = new Date(s);
+    if (!isNaN(tryD.getTime())) {
+      return new Date(tryD.getFullYear(), tryD.getMonth(), tryD.getDate());
+    }
+    return null;
+  }
+
+  const parsedStartDate = parseDateOnly(data.startDate);
   const today = new Date();
-  if (startDate) startDate.setHours(0,0,0,0);
-  today.setHours(0,0,0,0);
-  const isAvailable = !(startDate && today < startDate);
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // isAvailable: TRUE jeżeli brak daty lub data <= dzisiaj
+  const isAvailable = (parsedStartDate === null) || (parsedStartDate.getTime() <= todayMid.getTime());
+
+  // Przydatna funkcja formatująca datę do komunikatu (np. "2025-10-04")
+  function formatDateForUI(d) {
+    if (!d) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // --- koniec parsowania/dostępności ---
+
 
   // lista sekcji (pewne ukrycie)
   const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
@@ -668,6 +709,27 @@ function onSuccess(data) {
       // sudoku 9x9
       activeSection = document.getElementById("sudoku-container");
       showOnlySection(activeSection);
+           // --- NOWY GUARD: jeśli wynik NIE jest jeszcze dostępny, pokaż komunikat i zakończ ---
+      if (!isAvailable) {
+        const em = document.getElementById("error-message");
+        if (em) {
+          const stardate = formatDateForUI(parsedStartDate);
+          em.innerHTML = `Wyniki nie są jeszcze dostępne. Sprawdź ${stardate}.`;
+          em.style.display = "block";
+        }
+        // upewnij się, że sudoku-container jest schowany (nie pokazujemy planszy)
+        if (activeSection) {
+          const ratingContainer = activeSection.querySelector(".rating-container");
+          if (ratingContainer) { ratingContainer.style.display = "none"; ratingContainer.hidden = true; }
+          // chowamy tabele
+          const init = document.getElementById("initial-sudoku-table");
+          const sol = document.getElementById("solution-sudoku-table");
+          if (init) init.innerHTML = "";
+          if (sol) sol.innerHTML = "";
+        }
+        activeSection = null;
+        return; // przerywamy dalsze przetwarzanie onSuccess
+      }
 
       const codeVal = (data.code !== undefined && data.code !== null) ? String(data.code) : "";
       const decoded = decodeSudokuCode(codeVal);
