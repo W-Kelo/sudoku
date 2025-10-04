@@ -375,6 +375,26 @@
 </div>
 </div>
   </div>
+  <footer style="margin-top:40px; padding:16px 8px; text-align:center; font-size:0.85em; color:#666; border-top:1px solid #ddd;">
+  <p style="margin:4px 0;">
+    Ta strona nie zbiera żadnych danych osobowych i nie wykorzystuje plików cookies.
+  </p>
+  <p style="margin:4px 0;">
+    Usługa działa w oparciu o infrastrukturę firm
+    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub</a>
+    oraz
+    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google</a>,
+    które przetwarzają dane techniczne zgodnie z własnymi politykami prywatności.
+  </p>
+  <p style="margin:4px 0;">
+    Treści, łamigłówki i materiały publikowane na stronie są chronione prawem autorskim.
+    Kopiowanie, powielanie lub dalsze rozpowszechnianie bez zgody wydawcy jest zabronione.
+  </p>
+  <p style="margin-top:6px; font-weight:500; color:#444;">
+    &copy; Wydawnictwo Kelo <span id="year"></span>
+  </p>
+</footer>
+
 <script>
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
@@ -382,7 +402,7 @@
   const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
 
 
-
+document.getElementById("year").textContent = new Date().getFullYear();
 document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('input', (e) => {
     if (e.target.classList.contains('difficulty-slider')) {
