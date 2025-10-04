@@ -896,13 +896,21 @@ function onSuccess(data) {
 
 
 function submitRating(ratingType) {
-  // upewnij się, że mamy activeSection i kod
   if (!activeSection) return;
-  keloCodeGlobal = keloCodeGlobal || (document.getElementById("kelo-code") && document.getElementById("kelo-code").value.trim()) || '';
+  // upewnij się, że mamy aktualny kod
+  keloCodeGlobal = keloCodeGlobal || (document.getElementById("kelo-code") && document.getElementById("kelo-code").value.trim()) || "";
 
   const ratingMessageEl = activeSection.querySelector('.rating-message');
-  if (hasRated) {
-    if (ratingMessageEl) ratingMessageEl.innerText = 'Już oceniłeś tę łamigłówkę.';
+
+  // SPRAWDŹ czy ten TYP już jest oceniony (per-typ, z localStorage)
+  let alreadyRatedTypes = [];
+  try {
+    const raw = keloCodeGlobal ? localStorage.getItem(`rated_${keloCodeGlobal}`) : null;
+    if (raw && raw.length) alreadyRatedTypes = raw.split(',').filter(Boolean);
+  } catch(e) { alreadyRatedTypes = []; }
+
+  if (alreadyRatedTypes.includes(ratingType)) {
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Już oceniłeś tę ocenę.';
     return;
   }
 
@@ -915,19 +923,23 @@ function submitRating(ratingType) {
     return;
   }
 
-  // Bezpiecznie ustaw komunikat i zablokuj UI natychmiast, aby uniknąć wielokrotnego kliknięcia
+  // komunikat i oznaczenie, że wysyłamy ten typ
   if (ratingMessageEl) ratingMessageEl.innerText = 'Wysyłanie oceny...';
-// oznaczamy który typ jest wysyłany i wyłączamy tylko jego kontrolki
-activeSection.dataset.submittingRatingType = ratingType;
-activeSection.querySelectorAll(`button[onclick="submitRating('${ratingType}')"], .${ratingType}-slider`).forEach(el => el.disabled = true);
+  activeSection.dataset.submittingRatingType = ratingType;
 
+  // wyłącz tylko kontrolki powiązane z tym typem (suwak + przycisk)
+  activeSection.querySelectorAll(`button[onclick="submitRating('${ratingType}')"], .${ratingType}-slider`)
+    .forEach(el => el.disabled = true);
 
+  // wywołanie API
   callApi({ action: 'submitRating', kelo: keloCodeGlobal, ratingType: ratingType, rating: rating })
     .then(onRatingSuccess)
     .catch(function(err) {
-      // przy błędzie odblokuj przyciski (ale nie usuwaj localStorage)
-      activeSection.dataset.ratingSubmitting = '0';
-      enableRatingButtons(activeSection);
+      // przy błędzie - odblokuj tylko te kontrolki które były wysłane
+      const submittingType = activeSection.dataset.submittingRatingType || ratingType;
+      activeSection.querySelectorAll(`button[onclick="submitRating('${submittingType}')"], .${submittingType}-slider`)
+        .forEach(el => el.disabled = false);
+      delete activeSection.dataset.submittingRatingType;
       if (ratingMessageEl) ratingMessageEl.innerText = 'Błąd podczas zapisu oceny: ' + (err && err.message ? err.message : 'błąd sieci');
     });
 }
@@ -939,23 +951,34 @@ function onRatingSuccess(response) {
 
   const ratingMessageEl = activeSection.querySelector('.rating-message');
 
+  // jeśli brak odpowiedzi
   if (!response) {
     if (ratingMessageEl) ratingMessageEl.innerText = 'Nie otrzymano odpowiedzi od serwera.';
-    // odblokuj UI, pozwól spróbować ponownie
-    activeSection.dataset.ratingSubmitting = '0';
-    enableRatingButtons(activeSection);
+    // odblokuj suwak/przycisk wysyłanego typu
+    const submittingTypeFallback = activeSection.dataset.submittingRatingType;
+    if (submittingTypeFallback) {
+      activeSection.querySelectorAll(`button[onclick="submitRating('${submittingTypeFallback}')"], .${submittingTypeFallback}-slider`)
+        .forEach(el => el.disabled = false);
+      delete activeSection.dataset.submittingRatingType;
+    }
     return;
   }
 
   if (response.error) {
-    if (ratingMessageEl) ratingMessageEl.innerText = 'Błąd przy zapisywaniu oceny: ' + response.error;
-    activeSection.dataset.ratingSubmitting = '0';
-    enableRatingButtons(activeSection);
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Błąd przy zapisie: ' + response.error;
+    const submittingTypeFallback = activeSection.dataset.submittingRatingType;
+    if (submittingTypeFallback) {
+      activeSection.querySelectorAll(`button[onclick="submitRating('${submittingTypeFallback}')"], .${submittingTypeFallback}-slider`)
+        .forEach(el => el.disabled = false);
+      delete activeSection.dataset.submittingRatingType;
+    }
     return;
   }
 
-  // Sukces — aktualizujemy widok i zapisujemy fakt oceny w localStorage
+  // SUKCES
   if (ratingMessageEl) ratingMessageEl.innerText = 'Ocena zapisana. Dziękujemy!';
+
+  // zaktualizuj widoczne średnie (jeśli przesłane)
   const diffEl = activeSection.querySelector('.current-difficulty-rating');
   const intEl  = activeSection.querySelector('.current-interest-rating');
   const dodEl  = activeSection.querySelector('.current-dodatkowy-rating');
@@ -964,11 +987,10 @@ function onRatingSuccess(response) {
   if (intEl)  intEl.innerText  = !isNaN(response.interestRating)  ? parseFloat(response.interestRating).toFixed(2)  : 'Brak ocen';
   if (dodEl)  dodEl.innerText  = !isNaN(response.dodatkowyRating)  ? parseFloat(response.dodatkowyRating).toFixed(2)  : 'Brak ocen';
 
-  hasRated = true;
-  // pobierz typ, który był wysyłany (z poprzedniego submit)
-  const submittedType = activeSection && activeSection.dataset && activeSection.dataset.submittingRatingType ? activeSection.dataset.submittingRatingType : null;
+  // pobierz typ, który był wysyłany
+  const submittedType = activeSection.dataset && activeSection.dataset.submittingRatingType ? activeSection.dataset.submittingRatingType : null;
 
-  // Zaktualizuj localStorage: przechowuj listę typów oddanych dla danego kodu (CSV)
+  // zapisz w localStorage tylko ten typ (lista CSV)
   try {
     const key = `rated_${keloCodeGlobal}`;
     const existing = localStorage.getItem(key);
@@ -976,10 +998,10 @@ function onRatingSuccess(response) {
     if (submittedType && !arr.includes(submittedType)) arr.push(submittedType);
     localStorage.setItem(key, arr.join(','));
   } catch (e) {
-    // ignore storage errors
+    // ignore
   }
 
-  // Wyłącz trwale tylko kontrolki dla wysłanego typu (jeśli znamy typ)
+  // trwale wyłącz kontrolki tylko dla przesłanego typu
   if (submittedType) {
     activeSection.querySelectorAll(`button[onclick="submitRating('${submittedType}')"], .${submittedType}-slider`)
       .forEach(el => el.disabled = true);
@@ -989,18 +1011,24 @@ function onRatingSuccess(response) {
   if (activeSection && activeSection.dataset) {
     delete activeSection.dataset.submittingRatingType;
   }
+}
+
 
 
 
 
 
 function disableRatingButtons(section) {
-  section.querySelectorAll('.rating-button').forEach(btn => btn.disabled = true);
+  if (!section) return;
+  // wyłącz wszystkie przyciski i suwaki w obrębie sekcji
+  section.querySelectorAll('.rating-button, .slider').forEach(el => el.disabled = true);
 }
 
 function enableRatingButtons(section) {
-  section.querySelectorAll('.rating-button').forEach(btn => btn.disabled = false);
+  if (!section) return;
+  section.querySelectorAll('.rating-button, .slider').forEach(el => el.disabled = false);
 }
+
 
 
   function onFailure(error) {
