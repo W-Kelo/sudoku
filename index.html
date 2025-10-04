@@ -886,7 +886,8 @@ function submitRating(ratingType) {
   // Bezpiecznie ustaw komunikat i zablokuj UI natychmiast, aby uniknąć wielokrotnego kliknięcia
   if (ratingMessageEl) ratingMessageEl.innerText = 'Wysyłanie oceny...';
   // blokujemy suwaki i przyciski natychmiast
-  disableRatingButtons(activeSection);
+  disableRatingButtons(activeactiveSection.querySelectorAll(`button[onclick="submitRating('${ratingType}')"], .${ratingType}-slider`).forEach(el => el.disabled = true);
+Section);
   // oznaczamy, że trwa wysyłanie (opcjonalne)
   activeSection.dataset.ratingSubmitting = '1';
 
