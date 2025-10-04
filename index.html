@@ -805,62 +805,94 @@ function onSuccess(data) {
   try {
     keloCodeGlobal = (document.getElementById("kelo-code") && document.getElementById("kelo-code").value) ? document.getElementById("kelo-code").value.trim() : "";
 
-    if (activeSection) {
-      const ratingContainer = activeSection.querySelector(".rating-container");
-      if (ratingContainer) {
-        if (isAvailable) {
-          ratingContainer.style.display = "block";
-          ratingContainer.hidden = false;
-          ratingContainer.style.visibility = "visible";
+      if (activeSection) {
+        const ratingContainer = activeSection.querySelector(".rating-container");
+        if (ratingContainer) {
+          if (isAvailable) {
+            // pokaż kontener ocen
+            ratingContainer.style.display = "block";
+            ratingContainer.hidden = false;
+            ratingContainer.style.visibility = "visible";
 
-          const diffEl = ratingContainer.querySelector('.current-difficulty-rating');
-          const intEl  = ratingContainer.querySelector('.current-interest-rating');
-          const dodEl  = ratingContainer.querySelector('.current-dodatkowy-rating');
+            // bezpiecznie ustaw widoczne wartości ocen
+            const diffEl = ratingContainer.querySelector('.current-difficulty-rating');
+            const intEl  = ratingContainer.querySelector('.current-interest-rating');
+            const dodEl  = ratingContainer.querySelector('.current-dodatkowy-rating');
 
-          if (diffEl) diffEl.innerText = (!isNaN(parseFloat(data.difficultyRating)) ? parseFloat(data.difficultyRating).toFixed(2) : "Brak ocen");
-          if (intEl)  intEl.innerText  = (!isNaN(parseFloat(data.interestRating)) ? parseFloat(data.interestRating).toFixed(2) : "Brak ocen");
-          if (dodEl)  dodEl.innerText  = (!isNaN(parseFloat(data.dodatkowyRating)) ? parseFloat(data.dodatkowyRating).toFixed(2) : "Brak ocen");
+            if (diffEl) diffEl.innerText = (!isNaN(parseFloat(data.difficultyRating)) ? parseFloat(data.difficultyRating).toFixed(2) : "Brak ocen");
+            if (intEl)  intEl.innerText  = (!isNaN(parseFloat(data.interestRating)) ? parseFloat(data.interestRating).toFixed(2) : "Brak ocen");
+            if (dodEl)  dodEl.innerText  = (!isNaN(parseFloat(data.dodatkowyRating)) ? parseFloat(data.dodatkowyRating).toFixed(2) : "Brak ocen");
 
-          // sprawdź, czy użytkownik już ocenił tę konkretną łamigłówkę
-          try {
-            hasRated = keloCodeGlobal ? (localStorage.getItem(`rated_${keloCodeGlobal}`) === "true") : false;
-          } catch(e) {
-            hasRated = false;
-          }
+            // upewnij się, że mamy aktualny kod globalny
+            keloCodeGlobal = keloCodeGlobal || (document.getElementById("kelo-code") && document.getElementById("kelo-code").value.trim()) || "";
 
-          if (hasRated) {
-            disableRatingButtons(ratingContainer);
+            // odczytaj z localStorage listę już ocenionych typów (csv: "difficulty,interest")
+            let ratedTypes = [];
+            try {
+              const raw = keloCodeGlobal ? localStorage.getItem(`rated_${keloCodeGlobal}`) : null;
+              if (raw && raw.length) ratedTypes = raw.split(',').filter(Boolean);
+            } catch (e) {
+              ratedTypes = [];
+            }
+
+            // mapa typów -> selektory przycisków i suwaków
+            const controls = [
+              { type: 'difficulty', btnSelector: `button[onclick="submitRating('difficulty')"]`, sliderSelector: '.difficulty-slider' },
+              { type: 'interest',   btnSelector: `button[onclick="submitRating('interest')"]`,   sliderSelector: '.interest-slider' },
+              { type: 'dodatkowy',  btnSelector: `button[onclick="submitRating('dodatkowy')"]`,  sliderSelector: '.dodatkowy-slider' }
+            ];
+
+            // dla każdego typu ustawiamy niezależnie stan (włączamy/wyłączamy jego kontrolki)
+            controls.forEach(({type, btnSelector, sliderSelector}) => {
+              // znajdź przyciski i suwaki w ramach tego ratingContainer
+              const btns = Array.from(ratingContainer.querySelectorAll(btnSelector || ''));
+              const sliders = Array.from(ratingContainer.querySelectorAll(sliderSelector || ''));
+
+              const already = ratedTypes.includes(type);
+
+              // jeśli już ocenione -> wyłącz kontrolki, ustaw komunikat
+              if (already) {
+                btns.forEach(b => b.disabled = true);
+                sliders.forEach(s => s.disabled = true);
+              } else {
+                // nie ocenione -> upewnij się, że kontrolki są dostępne
+                btns.forEach(b => b.disabled = false);
+                sliders.forEach(s => s.disabled = false);
+              }
+            });
+
+            // ustaw komunikat na podstawie tego czy wszystkie typy ocenione
             const ratingMessageEl = ratingContainer.querySelector('.rating-message');
-            if (ratingMessageEl) ratingMessageEl.innerText = 'Już oceniłeś tę łamigłówkę.';
+            const allRated = ['difficulty','interest','dodatkowy'].every(t => ratedTypes.includes(t));
+            if (ratingMessageEl) {
+              if (allRated) {
+                ratingMessageEl.innerText = 'Już oceniłeś tę łamigłówkę.';
+              } else {
+                // jeśli któraś z ocen jest już oddana, nie pokazuj błędnego komunikatu
+                ratingMessageEl.innerText = '';
+              }
+            }
+
           } else {
-            enableRatingButtons(ratingContainer);
-            // i wyczyść ewentualny komunikat
-            const ratingMessageEl = ratingContainer.querySelector('.rating-message');
-            if (ratingMessageEl) ratingMessageEl.innerText = '';
+            // oceny niedostępne (publikacja w przyszłości) -> chowamy całkowicie kontener ocen
+            ratingContainer.style.display = "none";
+            ratingContainer.hidden = true;
+            ratingContainer.style.visibility = "hidden";
           }
-
-        } else {
-          ratingContainer.style.display = "none";
-          ratingContainer.hidden = true;
-          ratingContainer.style.visibility = "hidden";
         }
       }
+    } catch(e){ 
+      console.warn("rating handling error", e); 
     }
 
-  } catch(e){ console.warn("rating handling error", e); }
-
-  // jeśli nic nie ustawiono - pokaż komunikat
-  try {
-    const em = document.getElementById("error-message");
-    if (!activeSection && em && !em.innerText) {
-      em.innerText = "Brak danych do wyświetlenia dla tego typu łamigłówki.";
-      em.style.display = "block";
-    }
-  } catch(e){}
-}
-
-
-
+    // jeśli nic nie ustawiono - pokaż komunikat
+    try {
+      const em = document.getElementById("error-message");
+      if (!activeSection && em && !em.innerText) {
+        em.innerText = "Brak danych do wyświetlenia dla tego typu łamigłówki.";
+        em.style.display = "block";
+      }
+    } catch(e){}
 
 
 function submitRating(ratingType) {
@@ -885,11 +917,10 @@ function submitRating(ratingType) {
 
   // Bezpiecznie ustaw komunikat i zablokuj UI natychmiast, aby uniknąć wielokrotnego kliknięcia
   if (ratingMessageEl) ratingMessageEl.innerText = 'Wysyłanie oceny...';
-  // blokujemy suwaki i przyciski natychmiast
-  activeSection.querySelectorAll("[onclick*=\"submitRating('" + ratingType + "')\"], ." + ratingType + "-slider").forEach(el => el.disabled = true);
-  
-  // oznaczamy, że trwa wysyłanie (opcjonalne)
-  activeSection.dataset.ratingSubmitting = '1';
+// oznaczamy który typ jest wysyłany i wyłączamy tylko jego kontrolki
+activeSection.dataset.submittingRatingType = ratingType;
+activeSection.querySelectorAll(`button[onclick="submitRating('${ratingType}')"], .${ratingType}-slider`).forEach(el => el.disabled = true);
+
 
   callApi({ action: 'submitRating', kelo: keloCodeGlobal, ratingType: ratingType, rating: rating })
     .then(onRatingSuccess)
@@ -934,15 +965,31 @@ function onRatingSuccess(response) {
   if (dodEl)  dodEl.innerText  = !isNaN(response.dodatkowyRating)  ? parseFloat(response.dodatkowyRating).toFixed(2)  : 'Brak ocen';
 
   hasRated = true;
-  try {
-    // zapisz, że ten kod został oceniony
-    if (keloCodeGlobal) localStorage.setItem(`rated_${keloCodeGlobal}`, 'true');
-  } catch(e){ /* ignore storage errors */ }
+  // pobierz typ, który był wysyłany (z poprzedniego submit)
+  const submittedType = activeSection && activeSection.dataset && activeSection.dataset.submittingRatingType ? activeSection.dataset.submittingRatingType : null;
 
-  // upewnij się, że przyciski są wyłączone
-  disableRatingButtons(activeSection);
-  activeSection.dataset.ratingSubmitting = '0';
-}
+  // Zaktualizuj localStorage: przechowuj listę typów oddanych dla danego kodu (CSV)
+  try {
+    const key = `rated_${keloCodeGlobal}`;
+    const existing = localStorage.getItem(key);
+    const arr = existing && existing.length ? existing.split(',').filter(s => s) : [];
+    if (submittedType && !arr.includes(submittedType)) arr.push(submittedType);
+    localStorage.setItem(key, arr.join(','));
+  } catch (e) {
+    // ignore storage errors
+  }
+
+  // Wyłącz trwale tylko kontrolki dla wysłanego typu (jeśli znamy typ)
+  if (submittedType) {
+    activeSection.querySelectorAll(`button[onclick="submitRating('${submittedType}')"], .${submittedType}-slider`)
+      .forEach(el => el.disabled = true);
+  }
+
+  // usuń flagę "wysyłanie"
+  if (activeSection && activeSection.dataset) {
+    delete activeSection.dataset.submittingRatingType;
+  }
+
 
 
 
