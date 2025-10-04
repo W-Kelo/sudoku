@@ -804,6 +804,7 @@ function onSuccess(data) {
   // ratingy (tylko dla activeSection)
   try {
     keloCodeGlobal = (document.getElementById("kelo-code") && document.getElementById("kelo-code").value) ? document.getElementById("kelo-code").value.trim() : "";
+
     if (activeSection) {
       const ratingContainer = activeSection.querySelector(".rating-container");
       if (ratingContainer) {
@@ -811,11 +812,33 @@ function onSuccess(data) {
           ratingContainer.style.display = "block";
           ratingContainer.hidden = false;
           ratingContainer.style.visibility = "visible";
-          try { ratingContainer.querySelector(".current-difficulty-rating").innerText = (!isNaN(parseFloat(data.difficultyRating)) ? parseFloat(data.difficultyRating).toFixed(2) : "Brak ocen"); } catch(e){}
-          try { ratingContainer.querySelector(".current-interest-rating").innerText = (!isNaN(parseFloat(data.interestRating)) ? parseFloat(data.interestRating).toFixed(2) : "Brak ocen"); } catch(e){}
-          try { ratingContainer.querySelector(".current-dodatkowy-rating").innerText = (!isNaN(parseFloat(data.dodatkowyRating)) ? parseFloat(data.dodatkowyRating).toFixed(2) : "Brak ocen"); } catch(e){}
-          hasRated = keloCodeGlobal ? (localStorage.getItem(`rated_${keloCodeGlobal}`) === "true") : false;
-          if (hasRated) disableRatingButtons(ratingContainer); else enableRatingButtons(ratingContainer);
+
+          const diffEl = ratingContainer.querySelector('.current-difficulty-rating');
+          const intEl  = ratingContainer.querySelector('.current-interest-rating');
+          const dodEl  = ratingContainer.querySelector('.current-dodatkowy-rating');
+
+          if (diffEl) diffEl.innerText = (!isNaN(parseFloat(data.difficultyRating)) ? parseFloat(data.difficultyRating).toFixed(2) : "Brak ocen");
+          if (intEl)  intEl.innerText  = (!isNaN(parseFloat(data.interestRating)) ? parseFloat(data.interestRating).toFixed(2) : "Brak ocen");
+          if (dodEl)  dodEl.innerText  = (!isNaN(parseFloat(data.dodatkowyRating)) ? parseFloat(data.dodatkowyRating).toFixed(2) : "Brak ocen");
+
+          // sprawdź, czy użytkownik już ocenił tę konkretną łamigłówkę
+          try {
+            hasRated = keloCodeGlobal ? (localStorage.getItem(`rated_${keloCodeGlobal}`) === "true") : false;
+          } catch(e) {
+            hasRated = false;
+          }
+
+          if (hasRated) {
+            disableRatingButtons(ratingContainer);
+            const ratingMessageEl = ratingContainer.querySelector('.rating-message');
+            if (ratingMessageEl) ratingMessageEl.innerText = 'Już oceniłeś tę łamigłówkę.';
+          } else {
+            enableRatingButtons(ratingContainer);
+            // i wyczyść ewentualny komunikat
+            const ratingMessageEl = ratingContainer.querySelector('.rating-message');
+            if (ratingMessageEl) ratingMessageEl.innerText = '';
+          }
+
         } else {
           ratingContainer.style.display = "none";
           ratingContainer.hidden = true;
@@ -823,6 +846,7 @@ function onSuccess(data) {
         }
       }
     }
+
   } catch(e){ console.warn("rating handling error", e); }
 
   // jeśli nic nie ustawiono - pokaż komunikat
@@ -840,66 +864,83 @@ function onSuccess(data) {
 
 
 function submitRating(ratingType) {
+  // upewnij się, że mamy activeSection i kod
+  if (!activeSection) return;
+  keloCodeGlobal = keloCodeGlobal || (document.getElementById("kelo-code") && document.getElementById("kelo-code").value.trim()) || '';
+
+  const ratingMessageEl = activeSection.querySelector('.rating-message');
   if (hasRated) {
-    if (activeSection) {
-      activeSection.querySelector('.rating-message').innerText = 'Już oceniłeś tę łamigłówkę.';
-    }
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Już oceniłeś tę łamigłówkę.';
     return;
   }
-  if (!activeSection) return;
 
+  // pobierz suwak i ocenę
   const slider = activeSection.querySelector(`.${ratingType}-slider`);
   const rating = slider ? parseInt(slider.value, 10) : null;
 
   if (!rating) {
-    activeSection.querySelector('.rating-message').innerText = 'Proszę wybrać ocenę.';
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Proszę wybrać ocenę.';
     return;
   }
 
-  activeSection.querySelector('.rating-message').innerText = 'Wysyłanie oceny...';
+  // Bezpiecznie ustaw komunikat i zablokuj UI natychmiast, aby uniknąć wielokrotnego kliknięcia
+  if (ratingMessageEl) ratingMessageEl.innerText = 'Wysyłanie oceny...';
+  // blokujemy suwaki i przyciski natychmiast
+  disableRatingButtons(activeSection);
+  // oznaczamy, że trwa wysyłanie (opcjonalne)
+  activeSection.dataset.ratingSubmitting = '1';
 
   callApi({ action: 'submitRating', kelo: keloCodeGlobal, ratingType: ratingType, rating: rating })
     .then(onRatingSuccess)
     .catch(function(err) {
-      activeSection.querySelector('.rating-message').innerText = 'Błąd: ' + err.message;
+      // przy błędzie odblokuj przyciski (ale nie usuwaj localStorage)
+      activeSection.dataset.ratingSubmitting = '0';
+      enableRatingButtons(activeSection);
+      if (ratingMessageEl) ratingMessageEl.innerText = 'Błąd podczas zapisu oceny: ' + (err && err.message ? err.message : 'błąd sieci');
     });
 }
+
 
 
 function onRatingSuccess(response) {
   if (!activeSection) return;
 
+  const ratingMessageEl = activeSection.querySelector('.rating-message');
+
   if (!response) {
-    activeSection.querySelector('.rating-message').innerText =
-      'Wysyłam...';
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Nie otrzymano odpowiedzi od serwera.';
+    // odblokuj UI, pozwól spróbować ponownie
+    activeSection.dataset.ratingSubmitting = '0';
+    enableRatingButtons(activeSection);
     return;
   }
 
   if (response.error) {
-    activeSection.querySelector('.rating-message').innerText =
-      'Błąd przy zapisywaniu oceny: ' + response.error;
+    if (ratingMessageEl) ratingMessageEl.innerText = 'Błąd przy zapisywaniu oceny: ' + response.error;
+    activeSection.dataset.ratingSubmitting = '0';
+    enableRatingButtons(activeSection);
     return;
   }
 
-  activeSection.querySelector('.rating-message').innerText =
-    'Ocena zapisana. Dziękujemy!';
-  activeSection.querySelector('.current-difficulty-rating').innerText =
-    !isNaN(response.difficultyRating)
-      ? parseFloat(response.difficultyRating).toFixed(2)
-      : 'Brak ocen';
-  activeSection.querySelector('.current-interest-rating').innerText =
-    !isNaN(response.interestRating)
-      ? parseFloat(response.interestRating).toFixed(2)
-      : 'Brak ocen';
-  activeSection.querySelector('.current-dodatkowy-rating').innerText =
-    !isNaN(response.dodatkowyRating)
-      ? parseFloat(response.dodatkowyRating).toFixed(2)
-      : 'Brak ocen';
+  // Sukces — aktualizujemy widok i zapisujemy fakt oceny w localStorage
+  if (ratingMessageEl) ratingMessageEl.innerText = 'Ocena zapisana. Dziękujemy!';
+  const diffEl = activeSection.querySelector('.current-difficulty-rating');
+  const intEl  = activeSection.querySelector('.current-interest-rating');
+  const dodEl  = activeSection.querySelector('.current-dodatkowy-rating');
 
+  if (diffEl) diffEl.innerText = !isNaN(response.difficultyRating) ? parseFloat(response.difficultyRating).toFixed(2) : 'Brak ocen';
+  if (intEl)  intEl.innerText  = !isNaN(response.interestRating)  ? parseFloat(response.interestRating).toFixed(2)  : 'Brak ocen';
+  if (dodEl)  dodEl.innerText  = !isNaN(response.dodatkowyRating)  ? parseFloat(response.dodatkowyRating).toFixed(2)  : 'Brak ocen';
 
   hasRated = true;
-  localStorage.setItem(`rated_${keloCodeGlobal}`, 'true');
+  try {
+    // zapisz, że ten kod został oceniony
+    if (keloCodeGlobal) localStorage.setItem(`rated_${keloCodeGlobal}`, 'true');
+  } catch(e){ /* ignore storage errors */ }
+
+  // upewnij się, że przyciski są wyłączone
   disableRatingButtons(activeSection);
+  activeSection.dataset.ratingSubmitting = '0';
 }
 
 
