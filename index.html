@@ -586,7 +586,7 @@ function callApi(params) {
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
   document.getElementById("sudoku16-info").style.display = "none";
-  document.getElementById("sudokusm89").style.display = "none";
+  document.getElementById("sudokusm89-info").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
   document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
   document.getElementById("error-message").style.display = "none";
@@ -684,7 +684,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
