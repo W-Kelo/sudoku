@@ -315,6 +315,33 @@
   <p class="rating-message error-message"></p>
 </div>
  </div>
+
+    <div id="sudokusm89-info" style="display: none;">
+      <h2>Sudoku samurajskie ośmioplanszowe</h2>
+      <p>Wprowadzony kod dotyczy "sudoku samurajskiego" z <span id="sudokusm89-origin"></span>.</p>
+      <p>Aby wyświetlić rozwiązanie, <span id="sudokusm89-link"></span>.</p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+    </div>
+    
           <div id="konkurs-info" style="display: none;">
       <h2>Gratulujemy!</h2>
       <p>Poprawnie rozwiązałeś sudoku konkursowe z zeszytu <span id="konkurs-origin"></span>.</p>
@@ -559,6 +586,7 @@ function callApi(params) {
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
   document.getElementById("sudoku16-info").style.display = "none";
+  document.getElementById("sudokusm89").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
   document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
   document.getElementById("error-message").style.display = "none";
@@ -656,7 +684,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -741,6 +769,10 @@ function onSuccess(data) {
       activeSection = document.getElementById("cypher-puzzle-info");
       showOnlySection(activeSection);
       setCommon("cypher-puzzle-origin", "cypher-puzzle-link", data.origin, data.notes);
+    } else if (typeRaw === "sudokusm89" || typeRaw === "sudoku-samurajskie-8" || typeRaw === "sm89") {
+      activeSection = document.getElementById("sudokusm89-info");
+      showOnlySection(activeSection);
+      setCommon("sudokusm89-origin", "sudokusm89-link", data.origin, data.notes);
     } else if (typeRaw === "sudoku16" || typeRaw === "16" || typeRaw === "16x16") {
       activeSection = document.getElementById("sudoku16-info");
       showOnlySection(activeSection);
@@ -1058,6 +1090,7 @@ function enableRatingButtons(section) {
     document.getElementById("word-search-info").style.display = "none";
     document.getElementById("cypher-puzzle-info").style.display = "none";
     document.getElementById("sudoku16-info").style.display = "none";
+    document.getElementById("sudokusm89-info").style.display = "none";
     document.getElementById("konkurs-info").style.display = "none";
     document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
     document.getElementById("error-message").innerText = "Błąd: " + error.message;
@@ -1078,6 +1111,7 @@ function enableRatingButtons(section) {
       case 'wordsearch': return { name: 'Wykreślanka' };
       case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
       case 'sudoku16': return { name: 'Sudoku 16*16' };
+      case 'sudokusm89': return { name: 'Sudoku samurajskie ośmioplanszowe' };
       case 'konkurs': return { name: 'Konkurs' };
       case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
       default: return { name: 'Łamigłówka' };
