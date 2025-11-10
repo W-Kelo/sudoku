@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Komunikat o prywatności – Wydawnictwo Kelo</title>
+  <style>
+    :root {
+      --primary:#007bff;
+      --bg:#f9fafc;
+      --text:#333;
+    }
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      padding: 60px 20px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    header h1 {
+      font-size: 2rem;
+      margin: 0;
+      display: inline-block;
+      border-right: 3px solid rgba(255,255,255,0.75);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    @keyframes fadeDown {
+      from {opacity:0; transform: translateY(-20px);}
+      to   {opacity:1; transform: translateY(0);}
+    }
+    main {
+      max-width: 800px;
+      margin: -40px auto 60px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 28px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      animation: rise 1s ease;
+    }
+    @keyframes rise {
+      from {opacity:0; transform: translateY(30px);}
+      to   {opacity:1; transform: translateY(0);}
+    }
+    section {margin-bottom: 32px;}
+    h2 {
+      color: var(--primary);
+      border-left: 5px solid var(--primary);
+      padding-left: 10px;
+    }
+    a {color: var(--primary);}
+    footer {
+      text-align: center;
+      padding: 30px 10px;
+      font-size: 0.9em;
+      color: #666;
+    }
+    .scroll-indicator {
+      position: fixed;
+      top:0; left:0; height:4px; background: var(--primary);
+      width:0%; z-index:9999;
+      transition: width .2s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="scroll-indicator" id="scrollBar"></div>
+  <header>
+    <h1 id="typewriter"></h1>
+  </header>
+  <main>
+    <section>
+      <h2>1. Dlaczego wyświetlamy ten komunikat</h2>
+      <p>Ta strona wykorzystuje proste technologie przeglądarki do poprawnego działania i zapamiętywania Twoich wyborów.
+         Chcemy przejrzyście wyjaśnić, co to oznacza w praktyce.</p>
+    </section>
+
+    <section>
+      <h2>2. LocalStorage</h2>
+      <p><strong>LocalStorage</strong> to mechanizm wbudowany w każdą przeglądarkę. 
+         Służy do przechowywania małych informacji tylko na Twoim urządzeniu.
+         W naszym przypadku zapisujemy tam wyłącznie informację, że już oceniłeś daną łamigłówkę,
+         aby nie proponować ponownego głosowania. Dane te nie są przesyłane na żaden serwer.</p>
+      <p>Możesz je w każdej chwili usunąć w ustawieniach swojej przeglądarki (Wyczyść dane przeglądania → Dane witryn).</p>
+    </section>
+
+    <section>
+      <h2>3. Pliki cookie firm Google i GitHub</h2>
+      <p>Strona działa na <strong>GitHub Pages</strong> i korzysta z usługi 
+         <strong>Google Apps Script / Sheets</strong> do obsługi ocen. 
+         Te serwisy mogą automatycznie zapisywać techniczne pliki cookie
+         służące do utrzymania bezpieczeństwa, wydajności i statystyk.
+         Dane te nie są przez nas przetwarzane ani analizowane.</p>
+      <ul>
+        <li><a href="https://policies.google.com/privacy" target="_blank">Polityka prywatności Google</a></li>
+        <li><a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank">Polityka prywatności GitHub</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. Brak profilowania i śledzenia</h2>
+      <p>Nie stosujemy analityki, reklam ani żadnych systemów śledzących. 
+         Twoja aktywność na stronie nie jest profilowana ani łączona z żadnymi danymi osobowymi.</p>
+    </section>
+
+    <section>
+      <h2>5. Jak zachować pełną kontrolę</h2>
+      <p>Możesz:</p>
+      <ul>
+        <li>wyczyścić localStorage w ustawieniach przeglądarki,</li>
+        <li>zablokować pliki cookie w ustawieniach prywatności,</li>
+        <li>korzystać z trybu incognito, jeśli nie chcesz zachowywać żadnych danych lokalnych.</li>
+      </ul>
+    </section>
+  </main>
+  <footer>
+    © Wydawnictwo Kelo <script>document.write(new Date().getFullYear())</script>
+  </footer>
+
+  <script>
+    // Pasek postępu przewijania
+    const bar = document.getElementById('scrollBar');
+    window.addEventListener('scroll',()=>{
+      const scroll = document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      bar.style.width = (scroll/height*100) + '%';
+    });
+
+    // Efekt pisania
+    const text = "Komunikat o prywatności";
+    const el = document.getElementById("typewriter");
+    let i = 0;
+    function type() {
+      if (i < text.length) {
+        el.textContent += text.charAt(i);
+        i++;
+        setTimeout(type, 80); // prędkość pisania
+      } else {
+        el.style.borderRight = "none"; // po zakończeniu usuń kursor
+      }
+    }
+    document.addEventListener("DOMContentLoaded", type);
+  </script>
+</body>
+</html>
