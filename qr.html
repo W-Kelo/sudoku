@@ -122,6 +122,13 @@
           drawLine(overlayCtx, code.location.bottomLeftCorner, code.location.topLeftCorner, '#FF3B58');
 
           resultEl.textContent = code.data;
+
+          // skopiuj do schowka
+          navigator.clipboard.writeText(code.data).catch(()=>{});
+
+          // przekieruj na stronę sudoku z parametrem
+          const url = 'https://w-kelo.github.io/sudoku/?kod=' + encodeURIComponent(code.data);
+          window.location.href = url;
         } else {
           // jeśli nie wykryto, nie spamujemy wyniku — pozostawiamy informację
           // resultEl.textContent = 'Brak QR';
