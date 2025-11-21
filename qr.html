@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prosty czytnik QR (wbudowana kamera)</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px}
+    video{max-width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+    #output{min-height:48px;padding:8px;border-radius:8px;background:#f7f7f8;width:100%;max-width:720px;word-break:break-word}
+    canvas{display:none}
+    #box{position:absolute;left:0;top:0}
+    .controls{display:flex;gap:8px}
+    button{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:white;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h3>Prosty czytnik QR — wbudowana kamera</h3>
+  <div style="position:relative;max-width:720px;width:100%">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="overlay" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+  </div>
+
+  <div id="output">Wynik: <span id="result">—</span></div>
+  <canvas id="hiddenCanvas"></canvas>
+
+  <!-- lekka, darmowa biblioteka jsQR (odczyt obrazu QR) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+
+  <script>
+    // Najprostsze możliwe: wbudowana kamera (getUserMedia), bez systemowych dialogów poza popupem zgody
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const hiddenCanvas = document.getElementById('hiddenCanvas');
+    const resultEl = document.getElementById('result');
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+
+    let stream = null;
+    let rafId = null;
+
+    async function startCamera(){
+      if (stream) return;
+      try{
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = stream;
+        await video.play();
+
+        // ustaw canvasy w takiej samej rozdzielczości jak video
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        hiddenCanvas.width = video.videoWidth;
+        hiddenCanvas.height = video.videoHeight;
+
+        scanLoop();
+      }catch(err){
+        resultEl.textContent = 'Błąd: ' + err.message;
+      }
+    }
+
+    function stopCamera(){
+      if (stream){
+        stream.getTracks().forEach(t=>t.stop());
+        stream = null;
+      }
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      resultEl.textContent = '—';
+      clearOverlay();
+    }
+
+    function clearOverlay(){
+      const ctx = overlay.getContext('2d');
+      ctx.clearRect(0,0,overlay.width,overlay.height);
+    }
+
+    function drawLine(ctx, begin, end, color){
+      ctx.beginPath();
+      ctx.moveTo(begin.x, begin.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    function scanLoop(){
+      const ctx = hiddenCanvas.getContext('2d');
+      const overlayCtx = overlay.getContext('2d');
+
+      function tick(){
+        if (!video.videoWidth) {
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+
+        hiddenCanvas.width = video.videoWidth;
+        hiddenCanvas.height = video.videoHeight;
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+
+        ctx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const imageData = ctx.getImageData(0,0,hiddenCanvas.width, hiddenCanvas.height);
+
+        // jsQR - bardzo szybkie, darmowe
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+
+        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+
+        if (code){
+          // narysuj ramkę i pokaż wynik
+          drawLine(overlayCtx, code.location.topLeftCorner, code.location.topRightCorner, '#FF3B58');
+          drawLine(overlayCtx, code.location.topRightCorner, code.location.bottomRightCorner, '#FF3B58');
+          drawLine(overlayCtx, code.location.bottomRightCorner, code.location.bottomLeftCorner, '#FF3B58');
+          drawLine(overlayCtx, code.location.bottomLeftCorner, code.location.topLeftCorner, '#FF3B58');
+
+          resultEl.textContent = code.data;
+        } else {
+          // jeśli nie wykryto, nie spamujemy wyniku — pozostawiamy informację
+          // resultEl.textContent = 'Brak QR';
+        }
+
+        rafId = requestAnimationFrame(tick);
+      }
+
+      tick();
+    }
+
+    // kontrolki
+    startBtn.addEventListener('click', ()=>startCamera());
+    stopBtn.addEventListener('click', ()=>stopCamera());
+
+    // autostart (jeśli chcesz, usuń):
+    // startCamera();
+
+    // informacja: przeglądarki wymagają HTTPS lub "localhost" dla getUserMedia
+    // jeśli plik otwierasz lokalnie: uruchom prosty serwer (np. "npx http-server" lub "Live Server" w VSCode)
+  </script>
+</body>
+</html>
