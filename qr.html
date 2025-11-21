@@ -127,7 +127,7 @@
           navigator.clipboard.writeText(code.data).catch(()=>{});
 
           // przekieruj na stronę sudoku z parametrem
-          const url = 'https://w-kelo.github.io/sudoku/?kelo=' + encodeURIComponent(code.data);
+          const url = 'https://w-kelo.github.io/sudoku/?kod=' + encodeURIComponent(code.data);
           window.location.href = url;
         } else {
           // jeśli nie wykryto, nie spamujemy wyniku — pozostawiamy informację
