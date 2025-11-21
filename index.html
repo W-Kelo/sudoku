@@ -1129,6 +1129,24 @@ function enableRatingButtons(section) {
       default: return { name: 'Łamigłówka' };
     }
   }
+  document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const kelo = params.get("kelo");
+
+  if (kelo) {
+    const input = document.getElementById("kelo-code");
+
+    // sprawdź, czy input istnieje
+    if (input) {
+      input.value = kelo.trim();
+
+      // jeśli ma od razu odpalić pobieranie — odkomentuj:
+      // fetchSudoku();
+    } else {
+      console.warn("Nie znaleziono pola #kelo-code w DOM.");
+    }
+  }
+});
 </script>
 </body>
 </html>
