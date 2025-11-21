@@ -426,6 +426,18 @@
 <script>
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
+  document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const kelo = params.get("kelo");
+
+  if (kelo) {
+    document.getElementById("kelo-code").value = kelo;
+
+    // Jeśli ma też automatycznie pobrać:
+    // fetchSudoku();
+  }
+});
+
   let activeSection = null; // nowa globalna zmienna
   const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
 
