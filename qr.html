@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="pl">
 <head>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <base target="_top">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Skaner Kelo Kodów QR</title>
@@ -26,12 +28,29 @@
     <button id="stop">Stop</button>
   </div>
 
-  <div id="output">Wynik: <span id="result">—</span></div>
+  <div id="output">Kod: <span id="result">—</span></div>
   <canvas id="hiddenCanvas"></canvas>
 
-  <!-- lekka, darmowa biblioteka jsQR (odczyt obrazu QR) -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
-
+<footer style="margin-top:40px;padding:16px 8px;text-align:center;font-size:0.9em;color:#555;border-top:1px solid #ddd;">
+  <p style="margin:4px 0;">
+  Ta strona korzysta z aparatu wyłącznie do odczytywania kodów QR.
+  Obraz z kamery nie jest nigdzie wysyłany ani zapisywany — pozostaje w Twojej przeglądarce.
+  Skanowanie działa lokalnie dzięki bibliotece jsQR, która nie gromadzi ani nie przetwarza żadnych danych użytkownika.
+  Możesz w każdej chwili cofnąć dostęp do aparatu w ustawieniach przeglądarki.
+  </p>
+  <p style="margin:4px 0;">
+    Hosting zapewnia <a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer">GitHub Pages</a>, 
+    która może przetwarzać dane techniczne zgodnie z własną polityką prywatności.
+  </p>
+  <p style="margin:4px 0;">
+    Więcej informacji o prywatności na naszej stronie przeczytasz w 
+    <a href="komunikat.html" target="_blank" rel="noopener noreferrer" style="color:#007BFF;font-weight:500;">komunikacie o prywatności</a>.
+  </p>
+  <p style="margin-top:8px;color:#333;font-weight:500;">
+    © Wydawnictwo Kelo <span id="year"></span>
+  </p>
+</footer>
   <script>
     // Najprostsze możliwe: wbudowana kamera (getUserMedia), bez systemowych dialogów poza popupem zgody
     const video = document.getElementById('video');
@@ -40,6 +59,7 @@
     const resultEl = document.getElementById('result');
     const startBtn = document.getElementById('start');
     const stopBtn = document.getElementById('stop');
+    document.getElementById("year").textContent = new Date().getFullYear();
 
     let stream = null;
     let rafId = null;
