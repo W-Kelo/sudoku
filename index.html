@@ -433,11 +433,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let kelo = params.get("kelo");
 
   if (kelo) {
-    const prefix = "https://w-kelo.github.io/sudoku/?kelo=";
+    const marker = "kelo=";
 
-    // usuwa prefix tak długo, jak długo występuje
-    while (kelo.startsWith(prefix)) {
-      kelo = kelo.slice(prefix.length);
+    // Jeśli wewnątrz kelo jest kolejny "kelo=", bierzemy ostatnią wartość
+    if (kelo.includes(marker)) {
+      kelo = kelo.split(marker).pop(); 
     }
 
     document.getElementById("kelo-code").value = kelo;
@@ -445,6 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchSudoku();
   }
 });
+
 
 
 
