@@ -189,6 +189,17 @@
   background-color: #aaa;
   cursor: not-allowed;
 }
+    #qr-scan-button {
+    /* Domyślnie widoczny dla urządzeń mobilnych */
+    display: block; 
+}
+
+/* Ukryj przycisk, gdy szerokość ekranu jest większa niż np. 768px (typowa granica dla tabletów/desktopów) */
+@media (min-width: 769px) {
+    #qr-scan-button {
+        display: none;
+    }
+}
   </style>
 </head>
 <body>
@@ -198,7 +209,7 @@
       <p>Wpisz Kelo Kod, aby wyświetlić zawartość:</p>
       <input type="text" id="kelo-code" placeholder="Wpisz kod..." />
       <button onclick="fetchSudoku()">Wyświetl</button>
-      <button onclick="window.location.href='https://w-kelo.github.io/sudoku/qr'">Zeskanuj QR</button>
+      <button id="qr-scan-button" onclick="window.location.href='https://w-kelo.github.io/sudoku/qr'">Zeskanuj QR</button>
     </div>
 
     <div class="loader" id="loader"></div>
@@ -515,7 +526,45 @@ function callApi(params) {
       });
     });
 }
+/**
+     * Funkcja ukrywająca przycisk "Zeskanuj QR", gdy użytkownik jest na komputerze.
+     */
+    function hideButtonOnDesktop() {
+        const button = document.getElementById('qr-scan-button');
+        if (!button) {
+            console.error('Nie znaleziono przycisku o ID "qr-scan-button"');
+            return;
+        }
 
+        // Pobranie ciągu User Agent
+        const userAgent = navigator.userAgent;
+
+        // Lista słów kluczowych typowych dla urządzeń mobilnych/tabletów
+        // Jeśli User Agent zawiera któreś z nich, uznajemy urządzenie za mobilne.
+        const mobileKeywords = [
+            'Android', 
+            'webOS', 
+            'iPhone', 
+            'iPad', 
+            'iPod', 
+            'BlackBerry', 
+            'IEMobile', 
+            'Opera Mini'
+        ];
+
+        // Sprawdzenie, czy User Agent zawiera którekolwiek z mobilnych słów kluczowych
+        // Metoda .some() zwraca true, jeśli znajdzie choć jedno pasujące słowo.
+        const isMobile = mobileKeywords.some(keyword => userAgent.includes(keyword));
+
+        // Jeśli NIE jest to urządzenie mobilne (czyli zakładamy, że to desktop), ukryj przycisk.
+        if (!isMobile) {
+            button.style.display = 'none';
+        }
+        // W przeciwnym razie przycisk pozostaje widoczny (domyślny styl).
+    }
+
+    // Wywołanie funkcji po załadowaniu strony
+    hideButtonOnDesktop();
   function renderSudoku(boardString, containerId, isSolution = false) {
     const table = document.getElementById(containerId);
     if (!table) return;
