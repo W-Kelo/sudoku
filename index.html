@@ -435,17 +435,17 @@ document.addEventListener("DOMContentLoaded", () => {
   if (kelo) {
     const prefix = "https://w-kelo.github.io/sudoku/?kelo=";
 
-    // jeśli zaczyna się od pełnego prefixu — obcinamy
-    if (kelo.startsWith(prefix)) {
+    // usuwa prefix tak długo, jak długo występuje
+    while (kelo.startsWith(prefix)) {
       kelo = kelo.slice(prefix.length);
     }
 
     document.getElementById("kelo-code").value = kelo;
 
-    // Jeśli ma też automatycznie pobrać:
     fetchSudoku();
   }
 });
+
 
 
   let activeSection = null; // nowa globalna zmienna
