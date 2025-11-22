@@ -428,23 +428,39 @@
 <script>
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
+// Funkcja wyciągająca końcową wartość z zagnieżdżonych URL-i
+function extractKeloValue(input) {
+  try {
+    // Jeśli input wygląda jak URL, parsujemy go
+    const url = new URL(input);
+    const inner = url.searchParams.get("kelo");
+
+    // Jeśli wewnątrz jest kolejny kelo — przetwarzamy dalej
+    if (inner) {
+      return extractKeloValue(inner);
+    }
+  } catch (e) {
+    // Jeśli input NIE jest URL-em — to jest finalna wartość
+    return input;
+  }
+
+  // Gdy nie było dalszych zagnieżdżeń
+  return input;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
-  let kelo = params.get("kelo");
+  const firstKelo = params.get("kelo");
 
-  if (kelo) {
-    const marker = "kelo=";
+  if (firstKelo) {
+    const finalValue = extractKeloValue(firstKelo);
 
-    // Jeśli wewnątrz kelo jest kolejny "kelo=", bierzemy ostatnią wartość
-    if (kelo.includes(marker)) {
-      kelo = kelo.split(marker).pop(); 
-    }
-
-    document.getElementById("kelo-code").value = kelo;
+    document.getElementById("kelo-code").value = finalValue;
 
     fetchSudoku();
   }
 });
+
 
 
 
