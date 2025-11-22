@@ -429,23 +429,34 @@
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Definiujemy ciąg, który chcemy usunąć, jeśli występuje na początku
-    const prefixToTrim = "https://w-kelo.github.io/sudoku?";
+    // 1. Definiujemy długi ciąg prefiksu, który chcemy usunąć z PRZODU
+    const fullPrefixToTrim = "https://w-kelo.github.io/sudoku?kelo=";
     
     // 2. Pobieramy parametry z URL
     const params = new URLSearchParams(window.location.search);
-    let kelo = params.get("kelo"); // Używamy 'let', ponieważ będziemy modyfikować wartość
+    let kelo = params.get("kelo"); // Używamy 'let'
 
     if (kelo) {
         // 3. SPRAWDZANIE I PRZYCINANIE
-        // Sprawdzamy, czy wartość 'kelo' zaczyna się od zdefiniowanego prefiksu
-        if (kelo.startsWith(prefixToTrim)) {
-            // Jeśli tak, używamy .substring() lub .slice() do usunięcia prefiksu
-            // Długość prefiksu to 'prefixToTrim.length'
-            kelo = kelo.substring(prefixToTrim.length);
+        
+        // Zauważ, że w Twoim problematycznym URL to, co dostaje "kelo", 
+        // wygląda jak: "https://w-kelo.github.io/sudoku/?kelo=12884394"
+        
+        // Sprawdzamy, czy wartość 'kelo' zaczyna się od ciągu wskazującego na zagnieżdżony URL, 
+        // który zawiera już nazwę parametru 'kelo=' w sobie.
+        if (kelo.startsWith(fullPrefixToTrim)) {
+            // Jeśli tak, ucinamy cały ten długi ciąg
+            kelo = kelo.substring(fullPrefixToTrim.length);
+        } else if (kelo.startsWith("?kelo=")) {
+            // Dodatkowe zabezpieczenie, jeśli URL nie jest kompletny, ale zawiera "?kelo="
+            kelo = kelo.substring("?kelo=".length);
         }
+        
+        // Możesz również użyć prostszej metody .replace(), która jest bardziej elastyczna, 
+        // ale .startsWith() i .substring() jest precyzyjniejsze w tym kontekście:
+        // kelo = kelo.replace(fullPrefixToTrim, '');
 
-        // 4. Dalsza logika z potencjalnie przyciętym 'kelo'
+        // 4. Dalsza logika z oczyszczonym 'kelo'
         document.getElementById("kelo-code").value = kelo;
 
         // Jeśli ma też automatycznie pobrać:
