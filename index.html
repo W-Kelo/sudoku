@@ -429,38 +429,35 @@
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Definiujemy długi ciąg prefiksu, który chcemy usunąć z PRZODU
-    const fullPrefixToTrim = "https://w-kelo.github.io/sudoku?kelo=";
-    
-    // 2. Pobieramy parametry z URL
-    const params = new URLSearchParams(window.location.search);
-    let kelo = params.get("kelo"); // Używamy 'let'
+    // 1. Pobieramy zewnętrzny parametr 'kelo'
+    const outerParams = new URLSearchParams(window.location.search);
+    const complexUrl = outerParams.get("kelo"); // W tym momencie 'complexUrl' ma wartość: "https://w-kelo.github.io/sudoku/?kelo=12884394"
 
-    if (kelo) {
-        // 3. SPRAWDZANIE I PRZYCINANIE
-        
-        // Zauważ, że w Twoim problematycznym URL to, co dostaje "kelo", 
-        // wygląda jak: "https://w-kelo.github.io/sudoku/?kelo=12884394"
-        
-        // Sprawdzamy, czy wartość 'kelo' zaczyna się od ciągu wskazującego na zagnieżdżony URL, 
-        // który zawiera już nazwę parametru 'kelo=' w sobie.
-        if (kelo.startsWith(fullPrefixToTrim)) {
-            // Jeśli tak, ucinamy cały ten długi ciąg
-            kelo = kelo.substring(fullPrefixToTrim.length);
-        } else if (kelo.startsWith("?kelo=")) {
-            // Dodatkowe zabezpieczenie, jeśli URL nie jest kompletny, ale zawiera "?kelo="
-            kelo = kelo.substring("?kelo=".length);
+    if (complexUrl) {
+        // 2. Traktujemy tę wartość jako ciąg URL i wyodrębniamy z niej wewnętrzny ciąg zapytania.
+        // Używamy obiektu URL, aby łatwo pobrać część '?kelo=...'
+        try {
+            const tempUrl = new URL(complexUrl);
+            
+            // tempUrl.search ma teraz wartość: "?kelo=12884394"
+            
+            // 3. Tworzymy nowy obiekt URLSearchParams z wewnętrznym ciągiem zapytania
+            const innerParams = new URLSearchParams(tempUrl.search);
+            
+            // 4. Pobieramy właściwą, czystą wartość 'kelo'
+            const finalKeloCode = innerParams.get("kelo"); 
+
+            if (finalKeloCode) {
+                // 5. Ustawiamy czystą wartość
+                document.getElementById("kelo-code").value = finalKeloCode;
+
+                // Jeśli ma też automatycznie pobrać:
+                fetchSudoku();
+            }
+        } catch (e) {
+            console.error("Wartość parametru 'kelo' nie jest poprawnym URL-em", e);
+            // Można tu dodać logikę obsługi błędu, jeśli np. wartość nie jest poprawnym URL-em.
         }
-        
-        // Możesz również użyć prostszej metody .replace(), która jest bardziej elastyczna, 
-        // ale .startsWith() i .substring() jest precyzyjniejsze w tym kontekście:
-        // kelo = kelo.replace(fullPrefixToTrim, '');
-
-        // 4. Dalsza logika z oczyszczonym 'kelo'
-        document.getElementById("kelo-code").value = kelo;
-
-        // Jeśli ma też automatycznie pobrać:
-        fetchSudoku();
     }
 });
 
