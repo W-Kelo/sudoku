@@ -429,37 +429,24 @@
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Pobieramy zewnętrzny parametr 'kelo'
-    const outerParams = new URLSearchParams(window.location.search);
-    const complexUrl = outerParams.get("kelo"); // W tym momencie 'complexUrl' ma wartość: "https://w-kelo.github.io/sudoku/?kelo=12884394"
+  const params = new URLSearchParams(window.location.search);
+  let kelo = params.get("kelo");
 
-    if (complexUrl) {
-        // 2. Traktujemy tę wartość jako ciąg URL i wyodrębniamy z niej wewnętrzny ciąg zapytania.
-        // Używamy obiektu URL, aby łatwo pobrać część '?kelo=...'
-        try {
-            const tempUrl = new URL(complexUrl);
-            
-            // tempUrl.search ma teraz wartość: "?kelo=12884394"
-            
-            // 3. Tworzymy nowy obiekt URLSearchParams z wewnętrznym ciągiem zapytania
-            const innerParams = new URLSearchParams(tempUrl.search);
-            
-            // 4. Pobieramy właściwą, czystą wartość 'kelo'
-            const finalKeloCode = innerParams.get("kelo"); 
+  if (kelo) {
+    const prefix = "https://w-kelo.github.io/sudoku/?kelo=";
 
-            if (finalKeloCode) {
-                // 5. Ustawiamy czystą wartość
-                document.getElementById("kelo-code").value = finalKeloCode;
-
-                // Jeśli ma też automatycznie pobrać:
-                fetchSudoku();
-            }
-        } catch (e) {
-            console.error("Wartość parametru 'kelo' nie jest poprawnym URL-em", e);
-            // Można tu dodać logikę obsługi błędu, jeśli np. wartość nie jest poprawnym URL-em.
-        }
+    // jeśli zaczyna się od pełnego prefixu — obcinamy
+    if (kelo.startsWith(prefix)) {
+      kelo = kelo.slice(prefix.length);
     }
+
+    document.getElementById("kelo-code").value = kelo;
+
+    // Jeśli ma też automatycznie pobrać:
+    fetchSudoku();
+  }
 });
+
 
   let activeSection = null; // nowa globalna zmienna
   const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
