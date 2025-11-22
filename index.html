@@ -428,16 +428,29 @@
 <script>
   let keloCodeGlobal = '';
   let hasRated = false; // Zmienna do śledzenia oddanych głosów
-  document.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
-  const kelo = params.get("kelo");
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Definiujemy ciąg, który chcemy usunąć, jeśli występuje na początku
+    const prefixToTrim = "https://w-kelo.github.io/sudoku?";
+    
+    // 2. Pobieramy parametry z URL
+    const params = new URLSearchParams(window.location.search);
+    let kelo = params.get("kelo"); // Używamy 'let', ponieważ będziemy modyfikować wartość
 
-  if (kelo) {
-    document.getElementById("kelo-code").value = kelo;
+    if (kelo) {
+        // 3. SPRAWDZANIE I PRZYCINANIE
+        // Sprawdzamy, czy wartość 'kelo' zaczyna się od zdefiniowanego prefiksu
+        if (kelo.startsWith(prefixToTrim)) {
+            // Jeśli tak, używamy .substring() lub .slice() do usunięcia prefiksu
+            // Długość prefiksu to 'prefixToTrim.length'
+            kelo = kelo.substring(prefixToTrim.length);
+        }
 
-    // Jeśli ma też automatycznie pobrać:
-    fetchSudoku();
-  }
+        // 4. Dalsza logika z potencjalnie przyciętym 'kelo'
+        document.getElementById("kelo-code").value = kelo;
+
+        // Jeśli ma też automatycznie pobrać:
+        fetchSudoku();
+    }
 });
 
   let activeSection = null; // nowa globalna zmienna
