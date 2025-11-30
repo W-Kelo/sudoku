@@ -238,6 +238,39 @@
   <p class="rating-message error-message"></p>
 </div>
 </div>
+    <div id="sudoku-4x4-container" style="display: none;">
+      <p>Plansza:</p>
+      <table class="sudoku-4x4-table" id="initial-sudoku-4x4-table"></table>
+
+      <p>Rozwiązanie:</p>
+      <table class="sudoku-4x4-table" id="solution-sudoku-4x4-table"></table>
+
+      <div class="info-container">
+        <p><strong>Poziom trudności:</strong> <span id="difficulty-level"></span></p>
+        <p><strong>Pochodzenie:</strong> <span id="origin"></span></p>
+        <p><strong>Uwagi:</strong> <span id="notes"></span></p>
+      </div>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+</div>
     
     <div id="word-search-info" style="display: none;">
       <h2>Wykreślanka</h2>
@@ -317,6 +350,8 @@
   <p class="rating-message error-message"></p>
 </div>
  </div>
+
+    
 
     <div id="sudokusm89-info" style="display: none;">
       <h2>Sudoku samurajskie ośmioplanszowe</h2>
@@ -663,6 +698,7 @@ function callApi(params) {
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
   document.getElementById("sudoku16-info").style.display = "none";
+  document.getElementById("sudoku-4x4-container").style.display = "none";
   document.getElementById("sudokusm89-info").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
   document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
@@ -761,7 +797,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","sudoku-4x4-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -862,6 +898,10 @@ function onSuccess(data) {
       activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
       showOnlySection(activeSection);
       setCommon("wbudowana-sonda-rozmiaru-planszy-origin", "wbudowana-sonda-rozmiaru-planszy-link", data.origin, data.notes);
+    } else if (typeRaw === "sudoku-4x4-container") {
+      activeSection = document.getElementById("sudoku-4x4-container-info");
+      showOnlySection(activeSection);
+      setCommon("wbudowana-sonda-rozmiaru-planszy-origin", "sudoku-4x4-container-link", data.origin, data.notes);
     } else {
       // sudoku 9x9
       activeSection = document.getElementById("sudoku-container");
@@ -893,31 +933,68 @@ function onSuccess(data) {
       const initialBoardString = (decoded && decoded.board) ? decoded.board : codeVal;
       const difficulty = (decoded && decoded.difficulty) ? decoded.difficulty : "";
 
-      if (initialBoardString && initialBoardString.length === 81) {
-        const boardToSolve = [];
-        for (let i = 0; i < 81; i += 9) {
-          boardToSolve.push(initialBoardString.substring(i, i + 9).split("").map(Number));
-        }
-        try { solveSudoku(boardToSolve); } catch(e){ console.warn("solveSudoku error", e); }
-        const solvedBoardString = boardToSolve.flat().join("");
-        renderSudoku(initialBoardString, "initial-sudoku-table");
-        renderSudoku(solvedBoardString, "solution-sudoku-table", true);
-        document.getElementById("difficulty-level") && (document.getElementById("difficulty-level").innerText = difficulty);
-        document.getElementById("origin") && (document.getElementById("origin").innerText = data.origin || "Brak informacji");
-        document.getElementById("notes") && (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
-      } else {
-        const em = document.getElementById("error-message");
-        if (em) { em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 znaków)"; em.style.display = "block"; }
-        // nie ustawiamy activeSection bo nie mamy co pokazywać w sudoku-container
-        activeSection = null;
-      }
+      if (initialBoardString) {
+  /* --- SUDOKU 9x9 ---------------------------------------------------------- */
+  if (initialBoardString.length === 81) {
+
+    const boardToSolve = [];
+    for (let i = 0; i < 81; i += 9) {
+      boardToSolve.push(initialBoardString.substring(i, i + 9).split("").map(Number));
     }
-  } catch(e){
-    console.error("Błąd w onSuccess branch:", e);
+
+    try { solveSudoku(boardToSolve); } catch (e) { console.warn("solveSudoku error", e); }
+
+    const solvedBoardString = boardToSolve.flat().join("");
+
+    renderSudoku(initialBoardString, "initial-sudoku-table");
+    renderSudoku(solvedBoardString, "solution-sudoku-table", true);
+
+    document.getElementById("difficulty-level") &&
+      (document.getElementById("difficulty-level").innerText = difficulty);
+    document.getElementById("origin") &&
+      (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+    document.getElementById("notes") &&
+      (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+    activeSection = "sudoku-container";
+  }
+
+  /* --- SUDOKU 4x4 ---------------------------------------------------------- */
+  else if (initialBoardString.length === 16) {
+
+    const boardToSolve = [];
+    for (let i = 0; i < 16; i += 4) {
+      boardToSolve.push(initialBoardString.substring(i, i + 4).split("").map(Number));
+    }
+
+    try { solveSudoku4(boardToSolve); } catch (e) { console.warn("solveSudoku4 error", e); }
+
+    const solvedBoardString = boardToSolve.flat().join("");
+
+    renderSudoku4(initialBoardString, "initial-sudoku-table");
+    renderSudoku4(solvedBoardString, "solution-sudoku-table", true);
+
+    document.getElementById("difficulty-level") &&
+      (document.getElementById("difficulty-level").innerText = difficulty);
+    document.getElementById("origin") &&
+      (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+    document.getElementById("notes") &&
+      (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+    activeSection = "sudoku-container";
+  }
+
+  /* --- FORMAT NIEPRAWIDŁOWY ------------------------------------------------ */
+  else {
     const em = document.getElementById("error-message");
-    if (em) { em.innerText = "Błąd wewnętrzny."; em.style.display = "block"; }
+    if (em) {
+      em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 lub 16 znaków)";
+      em.style.display = "block";
+    }
     activeSection = null;
   }
+}
+
 
   // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
   sectionIds.forEach(id => {
@@ -1024,7 +1101,126 @@ function onSuccess(data) {
       }
     } catch(e){}
 }
+/* render dla 4x4 */
+function renderSudoku4(boardString, containerId, isSolution=false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
+  table.innerHTML = "";
 
+  // boardString długość 16 -> 4 wiersze po 4
+  const board = [];
+  for (let i = 0; i < 16; i += 4) {
+    board.push(boardString.substring(i, i + 4).split('').map(Number));
+  }
+
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+      td.style.width = "25%";
+      td.style.paddingTop = "25%";
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "18px";
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
+      if (cell !== 0) {
+        span.innerText = cell;
+        if (isSolution) span.style.color = "#4CAF50";
+      }
+      td.appendChild(span);
+
+      // pogrubione obramowania co 2 (blok 2x2)
+      if ((colIndex + 1) % 2 === 0 && colIndex < 3) {
+        td.style.borderRight = "3px solid #000";
+      }
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 3) {
+        td.style.borderBottom = "3px solid #000";
+      }
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+}
+
+/* backtracking solver dla 4x4 */
+function solveSudoku4(board) {
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      if (board[row][col] === 0) {
+        for (let num = 1; num <= 4; num++) {
+          if (isValid4(board, row, col, num)) {
+            board[row][col] = num;
+            if (solveSudoku4(board)) return true;
+            board[row][col] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true; // brak pustych -> sukces
+}
+
+/* sprawdzenie zasad dla 4x4 (wiersz, kolumna, blok 2x2) */
+function isValid4(board, row, col, num) {
+  for (let i = 0; i < 4; i++) {
+    if (board[row][i] === num) return false;        // w wierszu
+    if (board[i][col] === num) return false;        // w kolumnie
+  }
+  const boxRow = Math.floor(row / 2) * 2;
+  const boxCol = Math.floor(col / 2) * 2;
+  // iterujemy po 2x2 bloku
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      if (board[boxRow + r][boxCol + c] === num) return false;
+    }
+  }
+  return true;
+}
+
+/* prosty dekoder: "difficulty:boardString" lub sam boardString */
+function decodeSudokuCode4(code) {
+  const parts = code.split(':');
+  if (parts.length >= 2) {
+    return { difficulty: parts[0], board: parts.slice(1).join(':') };
+  }
+  return { difficulty: "", board: code };
+}
+
+/* funkcja uruchamiająca demo */
+function show4x4() {
+  const input = document.getElementById("kelo-code-4x4").value.trim();
+  if (!input) { alert("Wpisz kod."); return; }
+  const decoded = decodeSudokuCode4(input);
+  const boardString = decoded.board;
+  if (!boardString || boardString.length !== 16) {
+    alert("Nieprawidłowy format. Oczekiwane 16 znaków (0=puste).");
+    return;
+  }
+
+  // render initial
+  renderSudoku4(boardString, "initial-sudoku-table-4x4", false);
+
+  // przygotuj tablicę do rozwiązania
+  const board = [];
+  for (let i = 0; i < 16; i += 4) {
+    board.push(boardString.substring(i, i + 4).split("").map(Number));
+  }
+
+  const ok = solveSudoku4(board);
+  if (!ok) {
+    alert("Nie znaleziono rozwiązania.");
+    document.getElementById("solution-sudoku-table-4x4").innerHTML = "";
+    return;
+  }
+  const solvedString = board.flat().join("");
+  renderSudoku4(solvedString, "solution-sudoku-table-4x4", true);
+}
 function submitRating(ratingType) {
   if (!activeSection) return;
   // upewnij się, że mamy aktualny kod
@@ -1188,6 +1384,7 @@ function enableRatingButtons(section) {
       case 'wordsearch': return { name: 'Wykreślanka' };
       case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
       case 'sudoku16': return { name: 'Sudoku 16*16' };
+      case 'sudoku4': return { name: 'Sudoku 4x4' };
       case 'sudokusm89': return { name: 'Sudoku samurajskie ośmioplanszowe' };
       case 'konkurs': return { name: 'Konkurs' };
       case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
