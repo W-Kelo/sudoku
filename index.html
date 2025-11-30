@@ -933,67 +933,70 @@ function onSuccess(data) {
       const initialBoardString = (decoded && decoded.board) ? decoded.board : codeVal;
       const difficulty = (decoded && decoded.difficulty) ? decoded.difficulty : "";
 
-      if (initialBoardString) {
-  /* --- SUDOKU 9x9 ---------------------------------------------------------- */
-  if (initialBoardString.length === 81) {
+            if (initialBoardString) {
+        /* --- SUDOKU 9x9 ---------------------------------------------------------- */
+        if (initialBoardString.length === 81) {
 
-    const boardToSolve = [];
-    for (let i = 0; i < 81; i += 9) {
-      boardToSolve.push(initialBoardString.substring(i, i + 9).split("").map(Number));
-    }
+          const boardToSolve = [];
+          for (let i = 0; i < 81; i += 9) {
+            boardToSolve.push(initialBoardString.substring(i, i + 9).split("").map(Number));
+          }
 
-    try { solveSudoku(boardToSolve); } catch (e) { console.warn("solveSudoku error", e); }
+          try { solveSudoku(boardToSolve); } catch (e) { console.warn("solveSudoku error", e); }
 
-    const solvedBoardString = boardToSolve.flat().join("");
+          const solvedBoardString = boardToSolve.flat().join("");
 
-    renderSudoku(initialBoardString, "initial-sudoku-table");
-    renderSudoku(solvedBoardString, "solution-sudoku-table", true);
+          renderSudoku(initialBoardString, "initial-sudoku-table");
+          renderSudoku(solvedBoardString, "solution-sudoku-table", true);
 
-    document.getElementById("difficulty-level") &&
-      (document.getElementById("difficulty-level").innerText = difficulty);
-    document.getElementById("origin") &&
-      (document.getElementById("origin").innerText = data.origin || "Brak informacji");
-    document.getElementById("notes") &&
-      (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+          document.getElementById("difficulty-level") &&
+            (document.getElementById("difficulty-level").innerText = difficulty);
+          document.getElementById("origin") &&
+            (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+          document.getElementById("notes") &&
+            (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
-    activeSection = "sudoku-container";
-  }
+          activeSection = "sudoku-container";
+        }
 
-  /* --- SUDOKU 4x4 ---------------------------------------------------------- */
-  else if (initialBoardString.length === 16) {
+        /* --- SUDOKU 4x4 ---------------------------------------------------------- */
+        else if (initialBoardString.length === 16) {
 
-    const boardToSolve = [];
-    for (let i = 0; i < 16; i += 4) {
-      boardToSolve.push(initialBoardString.substring(i, i + 4).split("").map(Number));
-    }
+          const boardToSolve = [];
+          for (let i = 0; i < 16; i += 4) {
+            boardToSolve.push(initialBoardString.substring(i, i + 4).split("").map(Number));
+          }
 
-    try { solveSudoku4(boardToSolve); } catch (e) { console.warn("solveSudoku4 error", e); }
+          try { solveSudoku4(boardToSolve); } catch (e) { console.warn("solveSudoku4 error", e); }
 
-    const solvedBoardString = boardToSolve.flat().join("");
+          const solvedBoardString = boardToSolve.flat().join("");
 
-    renderSudoku4(initialBoardString, "initial-sudoku-table");
-    renderSudoku4(solvedBoardString, "solution-sudoku-table", true);
+          renderSudoku4(initialBoardString, "initial-sudoku-table");
+          renderSudoku4(solvedBoardString, "solution-sudoku-table", true);
 
-    document.getElementById("difficulty-level") &&
-      (document.getElementById("difficulty-level").innerText = difficulty);
-    document.getElementById("origin") &&
-      (document.getElementById("origin").innerText = data.origin || "Brak informacji");
-    document.getElementById("notes") &&
-      (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+          document.getElementById("difficulty-level") &&
+            (document.getElementById("difficulty-level").innerText = difficulty);
+          document.getElementById("origin") &&
+            (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+          document.getElementById("notes") &&
+            (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
-    activeSection = "sudoku-container";
-  }
+          activeSection = "sudoku-container";
+        }
 
-  /* --- FORMAT NIEPRAWIDŁOWY ------------------------------------------------ */
-  else {
-    const em = document.getElementById("error-message");
-    if (em) {
-      em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 lub 16 znaków)";
-      em.style.display = "block";
-    }
-    activeSection = null;
-  }
-}
+        /* --- FORMAT NIEPRAWIDŁOWY ------------------------------------------------ */
+        else {
+          const em = document.getElementById("error-message");
+          if (em) {
+            em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 lub 16 znaków)";
+            em.style.display = "block";
+          }
+          activeSection = null;
+        }
+      } // ← koniec "if (initialBoardString)"
+    }   // ← koniec "else" dla sudoku 9x9/4x4 wyboru
+  }     // ← KONIEC BLOKU "try {"
+
 
   // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
   sectionIds.forEach(id => {
