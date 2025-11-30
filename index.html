@@ -996,6 +996,9 @@ function onSuccess(data) {
       } // ← koniec "if (initialBoardString)"
     }   // ← koniec "else" dla sudoku 9x9/4x4 wyboru
   }     // ← KONIEC BLOKU "try {"
+  catch (e) {
+   console.warn("Error in puzzle section logic:", e);
+   }
 
 
   // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
