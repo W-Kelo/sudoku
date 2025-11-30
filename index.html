@@ -994,7 +994,7 @@ function onSuccess(data) {
     activeSection = null;
   }
 }
-
+}
 
   // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
   sectionIds.forEach(id => {
@@ -1270,8 +1270,6 @@ function submitRating(ratingType) {
     });
 }
 
-
-
 function onRatingSuccess(response) {
   if (!activeSection) return;
 
@@ -1338,11 +1336,6 @@ function onRatingSuccess(response) {
     delete activeSection.dataset.submittingRatingType;
   }
 }
-
-
-
-
-
 
 function disableRatingButtons(section) {
   if (!section) return;
