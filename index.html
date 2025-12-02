@@ -237,41 +237,7 @@
   </div>
   <p class="rating-message error-message"></p>
 </div>
-</div>
-    <div id="sudoku-4x4-container" style="display: none;">
-      <p>Plansza:</p>
-      <table class="sudoku-4x4-table" id="initial-sudoku-4x4-table"></table>
-
-      <p>Rozwiązanie:</p>
-      <table class="sudoku-4x4-table" id="solution-sudoku-4x4-table"></table>
-
-      <div class="info-container">
-        <p><strong>Poziom trudności:</strong> <span id="difficulty-level"></span></p>
-        <p><strong>Pochodzenie:</strong> <span id="origin"></span></p>
-        <p><strong>Uwagi:</strong> <span id="notes"></span></p>
-      </div>
-<div class="rating-container" style="display: none;">
-  <h3>Oceń łamigłówkę:</h3>
-  <div class="rating-section">
-    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
-    <div class="rating-input-container">
-      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
-      <span class="difficulty-value">5</span>
-      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
-    </div>
-  </div>
-  <div class="rating-section">
-    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
-    <div class="rating-input-container">
-      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
-      <span class="interest-value">5</span>
-      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
-    </div>
-  </div>
-  <p class="rating-message error-message"></p>
-</div>
-</div>
-    
+</div>    
     <div id="word-search-info" style="display: none;">
       <h2>Wykreślanka</h2>
       <p>Wprowadzony kod dotyczy krzyżówki "wykreślanka" z <span id="word-search-origin"></span>.</p>
@@ -297,7 +263,6 @@
   <p class="rating-message error-message"></p>
 </div>
 </div>
-
     
     <div id="cypher-puzzle-info" style="display: none;">
       <h2>Szyfrokrzyżówka</h2>
@@ -459,10 +424,11 @@
   </p>
 </footer>
 
-
 <script>
   let keloCodeGlobal = '';
-  let hasRated = false; // Zmienna do śledzenia oddanych głosów
+  let hasRated = false; 
+  let activeSection = null;
+  const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
 // Funkcja wyciągająca końcową wartość z zagnieżdżonych URL-i
 function extractKeloValue(input) {
   try {
@@ -475,7 +441,6 @@ function extractKeloValue(input) {
       return extractKeloValue(inner);
     }
   } catch (e) {
-    // Jeśli input NIE jest URL-em — to jest finalna wartość
     return input;
   }
 
@@ -495,14 +460,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchSudoku();
   }
 });
-
-
-
-
-
-  let activeSection = null; // nowa globalna zmienna
-  const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyq31m61bHr1b2YIc_V2DMgl74Vu6ORaSv5p5LPSXJVtw7ByvUOYq_hrrxLNGoEshCj0Q/exec";
-
 
 document.getElementById("year").textContent = new Date().getFullYear();
 document.addEventListener('DOMContentLoaded', () => {
@@ -539,7 +496,6 @@ function callApi(params) {
         if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
           return JSON.parse(trimmed);
         }
-        // inaczej spróbuj usunąć ewentualne callback(...) i sparsować wnętrze
         const m = trimmed.match(/^[^(]*\(([\s\S]*)\);?$/);
         if (m && m[1]) {
           return JSON.parse(m[1]);
@@ -586,11 +542,7 @@ function callApi(params) {
             return;
         }
 
-        // Pobranie ciągu User Agent
         const userAgent = navigator.userAgent;
-
-        // Lista słów kluczowych typowych dla urządzeń mobilnych/tabletów
-        // Jeśli User Agent zawiera któreś z nich, uznajemy urządzenie za mobilne.
         const mobileKeywords = [
             'Android', 
             'webOS', 
@@ -602,8 +554,6 @@ function callApi(params) {
             'Opera Mini'
         ];
 
-        // Sprawdzenie, czy User Agent zawiera którekolwiek z mobilnych słów kluczowych
-        // Metoda .some() zwraca true, jeśli znajdzie choć jedno pasujące słowo.
         const isMobile = mobileKeywords.some(keyword => userAgent.includes(keyword));
 
         // Jeśli NIE jest to urządzenie mobilne (czyli zakładamy, że to desktop), ukryj przycisk.
@@ -698,7 +648,6 @@ function callApi(params) {
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
   document.getElementById("sudoku16-info").style.display = "none";
-  document.getElementById("sudoku-4x4-container").style.display = "none";
   document.getElementById("sudokusm89-info").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
   document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
@@ -716,9 +665,6 @@ function callApi(params) {
 
 
 function onSuccess(data) {
-  console.log("onSuccess — przychodzące data:", data);
-
-  // 1) schowaj loader i error
   try {
     const loader = document.getElementById("loader");
     if (loader) { loader.style.display = "none"; loader.style.opacity = "1"; }
@@ -797,7 +743,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","sudoku-4x4-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -898,15 +844,10 @@ function onSuccess(data) {
       activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
       showOnlySection(activeSection);
       setCommon("wbudowana-sonda-rozmiaru-planszy-origin", "wbudowana-sonda-rozmiaru-planszy-link", data.origin, data.notes);
-    } else if (typeRaw === "sudoku-4x4-container") {
-      activeSection = document.getElementById("sudoku-4x4-container-info");
-      showOnlySection(activeSection);
-      setCommon("wbudowana-sonda-rozmiaru-planszy-origin", "sudoku-4x4-container-link", data.origin, data.notes);
     } else {
       // sudoku 9x9
       activeSection = document.getElementById("sudoku-container");
       showOnlySection(activeSection);
-           // --- NOWY GUARD: jeśli wynik NIE jest jeszcze dostępny, pokaż komunikat i zakończ ---
       if (!isAvailable) {
         const em = document.getElementById("error-message");
         if (em) {
@@ -984,7 +925,6 @@ function onSuccess(data) {
           activeSection = document.getElementById("sudoku-container");
         }
 
-        /* --- FORMAT NIEPRAWIDŁOWY ------------------------------------------------ */
         else {
           const em = document.getElementById("error-message");
           if (em) {
@@ -993,27 +933,22 @@ function onSuccess(data) {
           }
           activeSection = null;
         }
-      } // ← koniec "if (initialBoardString)"
-    }   // ← koniec "else" dla sudoku 9x9/4x4 wyboru
-  }     // ← KONIEC BLOKU "try {"
+      } 
+    }   
+  }    
   catch (e) {
    console.warn("Error in puzzle section logic:", e);
    }
-
-
-  // diagnostyka (krótkie) — wypisz tylko widoczne sekcje computed
   sectionIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const cs = window.getComputedStyle(el);
     if (cs.display !== 'none' && cs.visibility !== 'hidden') {
-      console.log("VISIBLE SECTION:", id, { display: cs.display, visibility: cs.visibility, offsetWidth: el.offsetWidth, offsetHeight: el.offsetHeight });
     } else {
-      console.log("HIDDEN SECTION:", id, { display: cs.display, visibility: cs.visibility });
     }
   });
 
-  // ratingy (tylko dla activeSection)
+  // Suwaki ocen
   try {
     keloCodeGlobal = (document.getElementById("kelo-code") && document.getElementById("kelo-code").value) ? document.getElementById("kelo-code").value.trim() : "";
 
@@ -1106,7 +1041,6 @@ function onSuccess(data) {
       }
     } catch(e){}
 }
-/* render dla 4x4 */
 function renderSudoku4(boardString, containerId, isSolution=false) {
   const table = document.getElementById(containerId);
   if (!table) return;
@@ -1152,7 +1086,6 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
   });
 }
 
-/* backtracking solver dla 4x4 */
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
@@ -1171,7 +1104,6 @@ function solveSudoku4(board) {
   return true; // brak pustych -> sukces
 }
 
-/* sprawdzenie zasad dla 4x4 (wiersz, kolumna, blok 2x2) */
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
     if (board[row][i] === num) return false;        // w wierszu
@@ -1188,7 +1120,6 @@ function isValid4(board, row, col, num) {
   return true;
 }
 
-/* prosty dekoder: "difficulty:boardString" lub sam boardString */
 function decodeSudokuCode4(code) {
   const parts = code.split(':');
   if (parts.length >= 2) {
@@ -1197,7 +1128,7 @@ function decodeSudokuCode4(code) {
   return { difficulty: "", board: code };
 }
 
-/* funkcja uruchamiająca demo */
+
 function show4x4() {
   const input = document.getElementById("kelo-code-4x4").value.trim();
   if (!input) { alert("Wpisz kod."); return; }
@@ -1254,11 +1185,8 @@ function submitRating(ratingType) {
     return;
   }
 
-  // komunikat i oznaczenie, że wysyłamy ten typ
   if (ratingMessageEl) ratingMessageEl.innerText = 'Wysyłanie oceny...';
   activeSection.dataset.submittingRatingType = ratingType;
-
-  // wyłącz tylko kontrolki powiązane z tym typem (suwak + przycisk)
   activeSection.querySelectorAll(`button[onclick="submitRating('${ratingType}')"], .${ratingType}-slider`)
     .forEach(el => el.disabled = true);
 
@@ -1279,8 +1207,6 @@ function onRatingSuccess(response) {
   if (!activeSection) return;
 
   const ratingMessageEl = activeSection.querySelector('.rating-message');
-
-  // jeśli brak odpowiedzi
   if (!response) {
     if (ratingMessageEl) ratingMessageEl.innerText = 'Nie otrzymano odpowiedzi od serwera.';
     // odblokuj suwak/przycisk wysyłanego typu
@@ -1304,10 +1230,7 @@ function onRatingSuccess(response) {
     return;
   }
 
-  // SUKCES
   if (ratingMessageEl) ratingMessageEl.innerText = 'Ocena zapisana. Dziękujemy!';
-
-  // zaktualizuj widoczne średnie (jeśli przesłane)
   const diffEl = activeSection.querySelector('.current-difficulty-rating');
   const intEl  = activeSection.querySelector('.current-interest-rating');
   const dodEl  = activeSection.querySelector('.current-dodatkowy-rating');
@@ -1315,11 +1238,7 @@ function onRatingSuccess(response) {
   if (diffEl) diffEl.innerText = !isNaN(response.difficultyRating) ? parseFloat(response.difficultyRating).toFixed(2) : 'Brak ocen';
   if (intEl)  intEl.innerText  = !isNaN(response.interestRating)  ? parseFloat(response.interestRating).toFixed(2)  : 'Brak ocen';
   if (dodEl)  dodEl.innerText  = !isNaN(response.dodatkowyRating)  ? parseFloat(response.dodatkowyRating).toFixed(2)  : 'Brak ocen';
-
-  // pobierz typ, który był wysyłany
   const submittedType = activeSection.dataset && activeSection.dataset.submittingRatingType ? activeSection.dataset.submittingRatingType : null;
-
-  // zapisz w localStorage tylko ten typ (lista CSV)
   try {
     const key = `rated_${keloCodeGlobal}`;
     const existing = localStorage.getItem(key);
@@ -1327,16 +1246,14 @@ function onRatingSuccess(response) {
     if (submittedType && !arr.includes(submittedType)) arr.push(submittedType);
     localStorage.setItem(key, arr.join(','));
   } catch (e) {
-    // ignore
+
   }
 
-  // trwale wyłącz kontrolki tylko dla przesłanego typu
   if (submittedType) {
     activeSection.querySelectorAll(`button[onclick="submitRating('${submittedType}')"], .${submittedType}-slider`)
       .forEach(el => el.disabled = true);
   }
 
-  // usuń flagę "wysyłanie"
   if (activeSection && activeSection.dataset) {
     delete activeSection.dataset.submittingRatingType;
   }
@@ -1352,8 +1269,6 @@ function enableRatingButtons(section) {
   if (!section) return;
   section.querySelectorAll('.rating-button, .slider').forEach(el => el.disabled = false);
 }
-
-
 
   function onFailure(error) {
     document.getElementById("loader").style.display = "none";
@@ -1382,7 +1297,6 @@ function enableRatingButtons(section) {
       case 'wordsearch': return { name: 'Wykreślanka' };
       case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
       case 'sudoku16': return { name: 'Sudoku 16*16' };
-      case 'sudoku4': return { name: 'Sudoku 4x4' };
       case 'sudokusm89': return { name: 'Sudoku samurajskie ośmioplanszowe' };
       case 'konkurs': return { name: 'Konkurs' };
       case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
