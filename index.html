@@ -956,7 +956,7 @@ function onSuccess(data) {
           document.getElementById("notes") &&
             (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
-          activeSection = "sudoku-container";
+          activeSection = document.getElementById("sudoku-container");
         }
 
         /* --- SUDOKU 4x4 ---------------------------------------------------------- */
@@ -981,7 +981,7 @@ function onSuccess(data) {
           document.getElementById("notes") &&
             (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
-          activeSection = "sudoku-container";
+          activeSection = document.getElementById("sudoku-container");
         }
 
         /* --- FORMAT NIEPRAWIDŁOWY ------------------------------------------------ */
