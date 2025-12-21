@@ -5,170 +5,182 @@
   <base target="_top">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Skaner Kelo Kodów QR</title>
+  <title>Skaner kodów Kelo Sudoku</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px}
     video{max-width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
     #output{min-height:48px;padding:8px;border-radius:8px;background:#f7f7f8;width:100%;max-width:720px;word-break:break-word}
     canvas{display:none}
-    #box{position:absolute;left:0;top:0}
     .controls{display:flex;gap:8px}
     button{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:white;cursor:pointer}
   </style>
 </head>
+
 <body>
-  <h3>Zeskanuj kod QR, aby wyświetlić łamigłówkę.</h3>
-  <div style="position:relative;max-width:720px;width:100%">
-    <video id="video" autoplay playsinline></video>
-    <canvas id="overlay" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
-  </div>
+<h3>Zeskanuj kod QR lub kod paskowy sudoku</h3>
 
-  <div class="controls">
-    <button id="start">Start</button>
-    <button id="stop">Stop</button>
-  </div>
+<div style="position:relative;max-width:720px;width:100%">
+  <video id="video" autoplay playsinline></video>
+  <canvas id="overlay" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
+</div>
 
-  <div id="output">Kod: <span id="result">—</span></div>
-  <canvas id="hiddenCanvas"></canvas>
+<div class="controls">
+  <button id="start">Start</button>
+  <button id="stop">Stop</button>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+<div id="output">Kod: <span id="result">—</span></div>
+<canvas id="hiddenCanvas"></canvas>
+
+<!-- Biblioteki -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.js"></script>
+
 <footer style="margin-top:40px;padding:16px 8px;text-align:center;font-size:0.9em;color:#555;border-top:1px solid #ddd;">
-  <p style="margin:4px 0;">
-  Ta strona korzysta z aparatu wyłącznie do odczytywania kodów QR.
-  Obraz z kamery nie jest nigdzie wysyłany ani zapisywany — pozostaje w Twojej przeglądarce.
-  Skanowanie działa lokalnie dzięki bibliotece jsQR, która nie gromadzi ani nie przetwarza żadnych danych użytkownika.
-  Możesz w każdej chwili cofnąć dostęp do aparatu w ustawieniach przeglądarki.
-  </p>
-  <p style="margin:4px 0;">
-    Hosting zapewnia <a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer">GitHub Pages</a>, 
-    która może przetwarzać dane techniczne zgodnie z własną polityką prywatności.
-  </p>
-  <p style="margin:4px 0;">
-    Więcej informacji o prywatności na naszej stronie przeczytasz w 
-    <a href="komunikat.html" target="_blank" rel="noopener noreferrer" style="color:#007BFF;font-weight:500;">komunikacie o prywatności</a>.
-  </p>
-  <p style="margin-top:8px;color:#333;font-weight:500;">
-    © Wydawnictwo Kelo <span id="year"></span>
-  </p>
+  © Wydawnictwo Kelo <span id="year"></span>
 </footer>
-  <script>
-    // Najprostsze możliwe: wbudowana kamera (getUserMedia), bez systemowych dialogów poza popupem zgody
-    const video = document.getElementById('video');
-    const overlay = document.getElementById('overlay');
-    const hiddenCanvas = document.getElementById('hiddenCanvas');
-    const resultEl = document.getElementById('result');
-    const startBtn = document.getElementById('start');
-    const stopBtn = document.getElementById('stop');
-    document.getElementById("year").textContent = new Date().getFullYear();
 
-    let stream = null;
-    let rafId = null;
+<script>
+/* ====== ELEMENTY ====== */
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const hiddenCanvas = document.getElementById('hiddenCanvas');
+const resultEl = document.getElementById('result');
+const startBtn = document.getElementById('start');
+const stopBtn = document.getElementById('stop');
+document.getElementById("year").textContent = new Date().getFullYear();
 
-    async function startCamera(){
-      if (stream) return;
-      try{
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
-        video.srcObject = stream;
-        await video.play();
+/* ====== STAN ====== */
+let stream = null;
+let rafId = null;
+let barcodeLocked = false;
+let quaggaStarted = false;
 
-        // ustaw canvasy w takiej samej rozdzielczości jak video
-        overlay.width = video.videoWidth;
-        overlay.height = video.videoHeight;
-        hiddenCanvas.width = video.videoWidth;
-        hiddenCanvas.height = video.videoHeight;
+/* ====== KAMERA ====== */
+async function startCamera(){
+  if (stream) return;
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},
+    audio:false
+  });
+  video.srcObject = stream;
+  await video.play();
 
-        scanLoop();
-      }catch(err){
-        resultEl.textContent = 'Błąd: ' + err.message;
-      }
+  overlay.width = video.videoWidth;
+  overlay.height = video.videoHeight;
+  hiddenCanvas.width = video.videoWidth;
+  hiddenCanvas.height = video.videoHeight;
+
+  scanLoop();
+}
+
+function stopCamera(){
+  if (stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
+  }
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  stopQuagga();
+  barcodeLocked = false;
+  resultEl.textContent = '—';
+  overlay.getContext('2d').clearRect(0,0,overlay.width,overlay.height);
+}
+
+/* ====== QUAGGA – CODE 128 ====== */
+function startQuagga(){
+  if (quaggaStarted) return;
+  quaggaStarted = true;
+
+  Quagga.init({
+    inputStream:{
+      type:"LiveStream",
+      target:video,
+      constraints:{facingMode:"environment"}
+    },
+    decoder:{
+      readers:["code_128_reader"]
+    },
+    locate:true
+  }, err=>{
+    if(!err) Quagga.start();
+  });
+
+  Quagga.onDetected(data=>{
+    if (barcodeLocked) return;
+    barcodeLocked = true;
+
+    const code = data.codeResult.code;
+    resultEl.textContent = code;
+    navigator.clipboard.writeText(code).catch(()=>{});
+
+    window.location.href ='https://w-kelo.github.io/sudoku/?kelo=' + encodeURIComponent(data.codeResult.code);
+
+    stopQuagga();
+  });
+}
+
+function stopQuagga(){
+  if (quaggaStarted){
+    Quagga.stop();
+    quaggaStarted = false;
+  }
+}
+
+/* ====== QR SCAN LOOP ====== */
+function scanLoop(){
+  const ctx = hiddenCanvas.getContext('2d');
+  const overlayCtx = overlay.getContext('2d');
+
+  function tick(){
+    if (!video.videoWidth){
+      rafId = requestAnimationFrame(tick);
+      return;
     }
 
-    function stopCamera(){
-      if (stream){
-        stream.getTracks().forEach(t=>t.stop());
-        stream = null;
-      }
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      resultEl.textContent = '—';
-      clearOverlay();
+    ctx.drawImage(video,0,0,hiddenCanvas.width,hiddenCanvas.height);
+    const img = ctx.getImageData(0,0,hiddenCanvas.width,hiddenCanvas.height);
+    const qr = jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+
+    overlayCtx.clearRect(0,0,overlay.width,overlay.height);
+
+    if (qr){
+      stopQuagga();
+      barcodeLocked = true;
+
+      const l = qr.location;
+      draw(l.topLeftCorner,l.topRightCorner);
+      draw(l.topRightCorner,l.bottomRightCorner);
+      draw(l.bottomRightCorner,l.bottomLeftCorner);
+      draw(l.bottomLeftCorner,l.topLeftCorner);
+
+      resultEl.textContent = qr.data;
+      navigator.clipboard.writeText(qr.data).catch(()=>{});
+
+      window.location.href =
+        'https://w-kelo.github.io/sudoku/?kelo=' + encodeURIComponent(qr.data);
+    } else {
+      startQuagga();
     }
 
-    function clearOverlay(){
-      const ctx = overlay.getContext('2d');
-      ctx.clearRect(0,0,overlay.width,overlay.height);
-    }
+    rafId = requestAnimationFrame(tick);
+  }
 
-    function drawLine(ctx, begin, end, color){
-      ctx.beginPath();
-      ctx.moveTo(begin.x, begin.y);
-      ctx.lineTo(end.x, end.y);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = color;
-      ctx.stroke();
-    }
+  function draw(a,b){
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(a.x,a.y);
+    overlayCtx.lineTo(b.x,b.y);
+    overlayCtx.lineWidth=4;
+    overlayCtx.strokeStyle='#FF3B58';
+    overlayCtx.stroke();
+  }
 
-    function scanLoop(){
-      const ctx = hiddenCanvas.getContext('2d');
-      const overlayCtx = overlay.getContext('2d');
+  tick();
+}
 
-      function tick(){
-        if (!video.videoWidth) {
-          rafId = requestAnimationFrame(tick);
-          return;
-        }
-
-        hiddenCanvas.width = video.videoWidth;
-        hiddenCanvas.height = video.videoHeight;
-        overlay.width = video.videoWidth;
-        overlay.height = video.videoHeight;
-
-        ctx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-        const imageData = ctx.getImageData(0,0,hiddenCanvas.width, hiddenCanvas.height);
-
-        // jsQR - bardzo szybkie, darmowe
-        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-
-        overlayCtx.clearRect(0,0,overlay.width,overlay.height);
-
-        if (code){
-          // narysuj ramkę i pokaż wynik
-          drawLine(overlayCtx, code.location.topLeftCorner, code.location.topRightCorner, '#FF3B58');
-          drawLine(overlayCtx, code.location.topRightCorner, code.location.bottomRightCorner, '#FF3B58');
-          drawLine(overlayCtx, code.location.bottomRightCorner, code.location.bottomLeftCorner, '#FF3B58');
-          drawLine(overlayCtx, code.location.bottomLeftCorner, code.location.topLeftCorner, '#FF3B58');
-
-          resultEl.textContent = code.data;
-
-          // skopiuj do schowka
-          navigator.clipboard.writeText(code.data).catch(()=>{});
-
-          // przekieruj na stronę sudoku z parametrem
-          const url = 'https://w-kelo.github.io/sudoku/?kelo=' + encodeURIComponent(code.data);
-          window.location.href = url;
-        } else {
-          // jeśli nie wykryto, nie spamujemy wyniku — pozostawiamy informację
-          // resultEl.textContent = 'Brak QR';
-        }
-
-        rafId = requestAnimationFrame(tick);
-      }
-
-      tick();
-    }
-
-    // kontrolki
-    startBtn.addEventListener('click', ()=>startCamera());
-    stopBtn.addEventListener('click', ()=>stopCamera());
-
-    // autostart (jeśli chcesz, usuń):
-    // startCamera();
-
-    // informacja: przeglądarki wymagają HTTPS lub "localhost" dla getUserMedia
-    // jeśli plik otwierasz lokalnie: uruchom prosty serwer (np. "npx http-server" lub "Live Server" w VSCode)
-  </script>
+/* ====== KONTROLKI ====== */
+startBtn.onclick = startCamera;
+stopBtn.onclick = stopCamera;
+</script>
 </body>
 </html>
