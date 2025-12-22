@@ -316,7 +316,31 @@
 </div>
  </div>
 
-    
+            <div id="sudoku10-info" style="display: none;">
+      <h2>Sudoku 10x10</h2>
+      <p>Wprowadzony kod dotyczy sudoku 10x10 z zeszytu <span id="sudoku10-origin"></span>.</p>
+      <p>Aby wyświetlić rozwiązanie, <span id="sudoku10-link"></span></p>
+<div class="rating-container" style="display: none;">
+  <h3>Oceń łamigłówkę:</h3>
+  <div class="rating-section">
+    <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+      <span class="difficulty-value">5</span>
+      <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <div class="rating-section">
+    <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+    <div class="rating-input-container">
+      <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+      <span class="interest-value">5</span>
+      <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+    </div>
+  </div>
+  <p class="rating-message error-message"></p>
+</div>
+ </div>
 
     <div id="sudokusm89-info" style="display: none;">
       <h2>Sudoku samurajskie ośmioplanszowe</h2>
@@ -648,6 +672,7 @@ function callApi(params) {
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
   document.getElementById("sudoku16-info").style.display = "none";
+  document.getElementById("sudoku10-info").style.display = "none";
   document.getElementById("sudokusm89-info").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
   document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
@@ -743,7 +768,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudoku10-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -836,6 +861,10 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudoku16-info");
       showOnlySection(activeSection);
       setCommon("sudoku16-origin", "sudoku16-link", data.origin, data.notes);
+    } else if (typeRaw === "sudoku10" || typeRaw === "10" || typeRaw === "10x10") {
+      activeSection = document.getElementById("sudoku10-info");
+      showOnlySection(activeSection);
+      setCommon("sudoku10-origin", "sudoku10-link", data.origin, data.notes);
     } else if (typeRaw === "konkurs") {
       activeSection = document.getElementById("konkurs-info");
       showOnlySection(activeSection);
@@ -1276,6 +1305,7 @@ function enableRatingButtons(section) {
     document.getElementById("word-search-info").style.display = "none";
     document.getElementById("cypher-puzzle-info").style.display = "none";
     document.getElementById("sudoku16-info").style.display = "none";
+    document.getElementById("sudoku10-info").style.display = "none";
     document.getElementById("sudokusm89-info").style.display = "none";
     document.getElementById("konkurs-info").style.display = "none";
     document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
@@ -1297,6 +1327,7 @@ function enableRatingButtons(section) {
       case 'wordsearch': return { name: 'Wykreślanka' };
       case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
       case 'sudoku16': return { name: 'Sudoku 16*16' };
+      case 'sudoku10': return { name: 'Sudoku 10x10' };
       case 'sudokusm89': return { name: 'Sudoku samurajskie ośmioplanszowe' };
       case 'konkurs': return { name: 'Konkurs' };
       case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
