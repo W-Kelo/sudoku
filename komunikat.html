@@ -122,28 +122,28 @@
         <li>korzystać z trybu incognito, jeśli nie chcesz zachowywać żadnych danych lokalnych.</li>
       </ul>
     </section>
-        <section>
-      <h2>6. Korzystanie z aparatu i skanera QR</h2>
-      <p>Wdrożony w listopadzie 2025 roku skaner QR wykorzystywany do
-         wczytywania Kelo Kodów — wymaga dostępu do aparatu Twojego urządzenia.</p>
+        
+      <section>
+      <h2>6. Korzystanie z aparatu i skanera kodów</h2>
+      <p>Wdrożony w listopadzie 2025 roku skaner kodów — wykorzystywany do błyskawicznego 
+         wczytywania łamigłówek Sudoku — wymaga dostępu do aparatu Twojego urządzenia.</p>
 
       <p><strong>Jak to działa?</strong></p>
       <ul>
-        <li>kamera jest używana wyłącznie do odczytania kodu QR w czasie rzeczywistym,</li>
-        <li>obraz z kamery <strong>nie jest nigdzie wysyłany</strong> — pozostaje wyłącznie w Twojej przeglądarce,</li>
-        <li>nie zapisujemy, nie przechowujemy i nie analizujemy obrazu ani nagrań,</li>
-        <li>dostęp do kamery jest aktywny tylko podczas otwarcia strony skanera.</li>
+        <li>Kamera jest używana wyłącznie do odczytania <strong>kodów QR oraz kodów kreskowych (Code 128)</strong> w czasie rzeczywistym.</li>
+        <li>Wykorzystujemy profesjonalne biblioteki programistyczne <strong>jsQR oraz Quagga2</strong>, które przetwarzają obraz lokalnie w pamięci Twojej przeglądarki.</li>
+        <li>Obraz z kamery <strong>nie jest nigdzie wysyłany, zapisywany ani archiwizowany</strong> — po przetworzeniu kodu, dane wizualne są natychmiast usuwane z pamięci operacyjnej.</li>
+        <li>Dostęp do kamery jest aktywny tylko w momencie korzystania z funkcji skanera.</li>
       </ul>
 
       <p><strong>Twoje bezpieczeństwo:</strong></p>
       <ul>
-        <li>przeglądarka zawsze poprosi Cię o zgodę na dostęp do aparatu,</li>
-        <li>możesz w każdej chwili cofnąć tę zgodę w ustawieniach przeglądarki,</li>
-        <li>nie stosujemy żadnego profilowania ani śledzenia opartego na obrazie.</li>
+        <li>Przeglądarka zawsze poprosi Cię o wyraźną zgodę na dostęp do aparatu przed uruchomieniem podglądu.</li>
+        <li>Możesz w każdej chwili cofnąć tę zgodę w ustawieniach prywatności swojej przeglądarki.</li>
+        <li>Nie stosujemy rozpoznawania twarzy, profilowania ani żadnego śledzenia opartego na obrazie z Twojej kamery.</li>
       </ul>
 
-      <p>Skaner QR działa w całości lokalnie — kod QR jest odczytywany w przeglądarce,
-         a następnie przekazywany jedynie do funkcji strony (np. automatyczne uzupełnienie pola tekstowego).</p>
+      <p>Skaner działa w modelu <em>client-side</em> — oznacza to, że cała "inteligencja" skanowania znajduje się na Twoim urządzeniu, a nie na naszych serwerach.</p>
     </section>
 
   </main>
