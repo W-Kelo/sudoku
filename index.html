@@ -344,7 +344,7 @@
 
     <div id="sudokusm89-info" style="display: none;">
       <h2>Sudoku samurajskie ośmioplanszowe</h2>
-      <p>Wprowadzony kod dotyczy "sudoku samurajskiego" z <span id="sudokusm89-origin"></span>.</p>
+      <p>Wprowadzony kod dotyczy "sudoku samurajskiego" z zeszytu <span id="sudokusm89-origin"></span>.</p>
       <p>Aby wyświetlić rozwiązanie, <span id="sudokusm89-link"></span>.</p>
 <div class="rating-container" style="display: none;">
   <h3>Oceń łamigłówkę:</h3>
@@ -928,6 +928,31 @@ function onSuccess(data) {
 
           activeSection = document.getElementById("sudoku-container");
         }
+          /* --- SUDOKU 6x6 ---------------------------------------------------------- */
+else if (initialBoardString.length === 36) {
+
+  const boardToSolve = [];
+  for (let i = 0; i < 36; i += 6) {
+    boardToSolve.push(initialBoardString.substring(i, i + 6).split("").map(Number));
+  }
+
+  try { solveSudoku6(boardToSolve); } catch (e) { console.warn("solveSudoku6 error", e); }
+
+  const solvedBoardString = boardToSolve.flat().join("");
+
+  renderSudoku6(initialBoardString, "initial-sudoku-table");
+  renderSudoku6(solvedBoardString, "solution-sudoku-table", true);
+
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
+
 
         /* --- SUDOKU 4x4 ---------------------------------------------------------- */
         else if (initialBoardString.length === 16) {
@@ -1114,6 +1139,56 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
     table.appendChild(tr);
   });
 }
+  function renderSudoku6(boardString, containerId, isSolution=false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
+  table.innerHTML = "";
+
+  const board = [];
+  for (let i = 0; i < 36; i += 6) {
+    board.push(boardString.substring(i, i + 6).split('').map(Number));
+  }
+
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+      td.style.width = "16.66%";
+      td.style.paddingTop = "16.66%";
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "18px";
+
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
+
+      if (cell !== 0) {
+        span.innerText = cell;
+        if (isSolution) span.style.color = "#4CAF50";
+      }
+
+      td.appendChild(span);
+
+      // grubszą linię co blok 3x2
+      if ((colIndex + 1) % 3 === 0 && colIndex < 5) {
+        td.style.borderRight = "3px solid #000";
+      }
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 5) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
+
 
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
@@ -1132,6 +1207,24 @@ function solveSudoku4(board) {
   }
   return true; // brak pustych -> sukces
 }
+  function solveSudoku6(board) {
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 6; col++) {
+      if (board[row][col] === 0) {
+        for (let num = 1; num <= 6; num++) {
+          if (isValid6(board, row, col, num)) {
+            board[row][col] = num;
+            if (solveSudoku6(board)) return true;
+            board[row][col] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
@@ -1148,6 +1241,24 @@ function isValid4(board, row, col, num) {
   }
   return true;
 }
+  function isValid6(board, row, col, num) {
+  for (let i = 0; i < 6; i++) {
+    if (board[row][i] === num) return false;
+    if (board[i][col] === num) return false;
+  }
+
+  const boxRow = Math.floor(row / 2) * 2;
+  const boxCol = Math.floor(col / 3) * 3;
+
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[boxRow + r][boxCol + c] === num) return false;
+    }
+  }
+
+  return true;
+}
+
 
 function decodeSudokuCode4(code) {
   const parts = code.split(':');
@@ -1156,6 +1267,14 @@ function decodeSudokuCode4(code) {
   }
   return { difficulty: "", board: code };
 }
+  function decodeSudokuCode6(code) {
+  const parts = code.split(':');
+  if (parts.length >= 2) {
+    return { difficulty: parts[0], board: parts.slice(1).join(':') };
+  }
+  return { difficulty: "", board: code };
+}
+
 
 
 function show4x4() {
@@ -1186,6 +1305,35 @@ function show4x4() {
   const solvedString = board.flat().join("");
   renderSudoku4(solvedString, "solution-sudoku-table-4x4", true);
 }
+  function show6x6() {
+  const input = document.getElementById("kelo-code-6x6").value.trim();
+  if (!input) { alert("Wpisz kod."); return; }
+
+  const decoded = decodeSudokuCode6(input);
+  const boardString = decoded.board;
+
+  if (!boardString || boardString.length !== 36) {
+    alert("Nieprawidłowy format. Oczekiwane 36 znaków (0=puste).");
+    return;
+  }
+
+  renderSudoku6(boardString, "initial-sudoku-table-6x6");
+
+  const board = [];
+  for (let i = 0; i < 36; i += 6) {
+    board.push(boardString.substring(i, i + 6).split("").map(Number));
+  }
+
+  const ok = solveSudoku6(board);
+  if (!ok) {
+    alert("Nie znaleziono rozwiązania.");
+    document.getElementById("solution-sudoku-table-6x6").innerHTML = "";
+    return;
+  }
+
+  renderSudoku6(board.flat().join(""), "solution-sudoku-table-6x6", true);
+}
+
 function submitRating(ratingType) {
   if (!activeSection) return;
   // upewnij się, że mamy aktualny kod
