@@ -952,6 +952,30 @@ else if (initialBoardString.length === 36) {
 
   activeSection = document.getElementById("sudoku-container");
 }
+/* --- SUDOKU 10x10 ---------------------------------------------------------- */
+else if (initialBoardString.length === 100) {
+
+  const boardToSolve = [];
+  for (let i = 0; i < 100; i += 10) {
+    boardToSolve.push(initialBoardString.substring(i, i + 10).split("").map(Number));
+  }
+
+  try { solveSudoku10(boardToSolve); } catch (e) { console.warn("solveSudoku10 error", e); }
+
+  const solvedBoardString = boardToSolve.flat().join("");
+
+  renderSudoku10(initialBoardString, "initial-sudoku-table");
+  renderSudoku10(solvedBoardString, "solution-sudoku-table", true);
+
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
 
 
         /* --- SUDOKU 4x4 ---------------------------------------------------------- */
@@ -1188,6 +1212,55 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
     table.appendChild(tr);
   });
 }
+function renderSudoku10(boardString, containerId, isSolution = false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
+  table.innerHTML = "";
+
+  const board = [];
+  for (let i = 0; i < 100; i += 10) {
+    board.push(boardString.substring(i, i + 10).split('').map(Number));
+  }
+
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+      td.style.width = "10%";
+      td.style.paddingTop = "10%";
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "16px";
+
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
+
+      if (cell !== 0) {
+        span.innerText = cell;
+        if (isSolution) span.style.color = "#4CAF50";
+      }
+
+      td.appendChild(span);
+
+      // blok 2x5
+      if ((colIndex + 1) % 5 === 0 && colIndex < 9) {
+        td.style.borderRight = "3px solid #000";
+      }
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 9) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
 
 
 function solveSudoku4(board) {
@@ -1224,6 +1297,27 @@ function solveSudoku4(board) {
   }
   return true;
 }
+  function solveSudoku10(board) {
+  for (let row = 0; row < 10; row++) {
+    for (let col = 0; col < 10; col++) {
+
+      if (board[row][col] === 0) {
+
+        for (let num = 1; num <= 10; num++) {
+          if (isValid10(board, row, col, num)) {
+            board[row][col] = num;
+            if (solveSudoku10(board)) return true;
+            board[row][col] = 0;
+          }
+        }
+
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 
 
 function isValid4(board, row, col, num) {
@@ -1258,6 +1352,31 @@ function isValid4(board, row, col, num) {
 
   return true;
 }
+  function isValid10(board, row, col, num) {
+
+  // wiersz
+  for (let i = 0; i < 10; i++) {
+    if (board[row][i] === num) return false;
+  }
+
+  // kolumna
+  for (let i = 0; i < 10; i++) {
+    if (board[i][col] === num) return false;
+  }
+
+  // blok 2x5
+  const boxRow = Math.floor(row / 2) * 2;
+  const boxCol = Math.floor(col / 5) * 5;
+
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 5; c++) {
+      if (board[boxRow + r][boxCol + c] === num) return false;
+    }
+  }
+
+  return true;
+}
+
 
 
 function decodeSudokuCode4(code) {
@@ -1274,6 +1393,14 @@ function decodeSudokuCode4(code) {
   }
   return { difficulty: "", board: code };
 }
+  function decodeSudokuCode10(code) {
+  const parts = code.split(':');
+  if (parts.length >= 2) {
+    return { difficulty: parts[0], board: parts.slice(1).join(':') };
+  }
+  return { difficulty: "", board: code };
+}
+
 
 
 
@@ -1333,6 +1460,38 @@ function show4x4() {
 
   renderSudoku6(board.flat().join(""), "solution-sudoku-table-6x6", true);
 }
+  function show10x10() {
+  const input = document.getElementById("kelo-code-10x10").value.trim();
+  if (!input) { alert("Wpisz kod."); return; }
+
+  const decoded = decodeSudokuCode10(input);
+  const boardString = decoded.board;
+
+  if (!boardString || boardString.length !== 100) {
+    alert("Nieprawidłowy format. Oczekiwane 100 znaków (0 = puste).");
+    return;
+  }
+
+  // render planszy początkowej
+  renderSudoku10(boardString, "initial-sudoku-table-10x10", false);
+
+  // przygotuj tablicę do rozwiązania
+  const board = [];
+  for (let i = 0; i < 100; i += 10) {
+    board.push(boardString.substring(i, i + 10).split("").map(Number));
+  }
+
+  const ok = solveSudoku10(board);
+  if (!ok) {
+    alert("Nie znaleziono rozwiązania.");
+    document.getElementById("solution-sudoku-table-10x10").innerHTML = "";
+    return;
+  }
+
+  const solvedString = board.flat().join("");
+  renderSudoku10(solvedString, "solution-sudoku-table-10x10", true);
+}
+
 
 function submitRating(ratingType) {
   if (!activeSection) return;
