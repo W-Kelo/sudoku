@@ -969,8 +969,8 @@ else if (initialBoardString.trim().startsWith("[")) {
   }
 
   // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
-  renderSudoku10(initialBoard, "initial-sudoku-table");
-  renderSudoku10(boardToSolve, "solution-sudoku-table", true);
+  renderSudoku10(initialBoard, "initial-sudoku-table-10x10");
+  renderSudoku10(solvedBoard, "solution-sudoku-table-10x10", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
@@ -1212,32 +1212,65 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
     table.appendChild(tr);
   });
 }
-function renderSudoku10(board, containerId, solved = false) {
+function renderSudoku10(board, containerId, isSolution = false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
 
-    const container = document.getElementById(containerId);
-    container.innerHTML = "";
+  table.innerHTML = "";
 
-    const table = document.createElement("table");
-    table.className = solved ? "sudoku10 solved" : "sudoku10";
+  // board to już tablica 10x10
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
 
-    for (let r = 0; r < 10; r++) {
-        const tr = document.createElement("tr");
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
 
-        for (let c = 0; c < 10; c++) {
-            const td = document.createElement("td");
+      // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
+      td.style.width = "10%";
+      td.style.paddingTop = "10%";          // kwadrat
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "18px";
 
-            const val = board[r][c];
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
 
-            td.textContent = val === 0 ? "" : val;
+      if (cell !== 0) {
+        span.innerText = cell;
 
-            tr.appendChild(td);
+        // zielone jak wyżej
+        if (isSolution) {
+          span.style.color = "#4CAF50";
         }
+      }
 
-        table.appendChild(tr);
-    }
+      td.appendChild(span);
 
-    container.appendChild(table);
+      // ===========================
+      // pogrubione granice bloków 2x5
+      // ===========================
+
+      // pionowe podziałki co 5 kolumn
+      if ((colIndex + 1) % 5 === 0 && colIndex < 9) {
+        td.style.borderRight = "3px solid #000";
+      }
+
+      // poziome podziałki co 2 wiersze
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 9) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
 }
+
 
 
 
