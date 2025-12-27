@@ -969,8 +969,8 @@ else if (initialBoardString.trim().startsWith("[")) {
   }
 
   // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
-  renderSudoku10(initialBoard, "initial-sudoku-table-10x10");
-  renderSudoku10(boardToSolve, "solution-sudoku-table-10x10", true);
+  renderSudoku10(initialBoard, "initial-sudoku-table");
+  renderSudoku10(boardToSolve, "solution-sudoku-table", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
