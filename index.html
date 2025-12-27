@@ -974,6 +974,10 @@ else if (initialBoardString.trim().startsWith("[")) {
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
   activeSection = document.getElementById("sudoku-container");
 }
