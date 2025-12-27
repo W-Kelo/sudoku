@@ -953,29 +953,29 @@ else if (initialBoardString.length === 36) {
   activeSection = document.getElementById("sudoku-container");
 }
 /* --- SUDOKU 10x10 ---------------------------------------------------------- */
-else if (initialBoardString.length === 100) {
+else if (initialBoardString.trim().startsWith("[")) {
 
-  const boardToSolve = [];
-  for (let i = 0; i < 100; i += 10) {
-    boardToSolve.push(initialBoardString.substring(i, i + 10).split("").map(Number));
+  // 1) zamiana KeloPlusCode -> tablica 10x10
+  const boardToSolve = parseBoard10FromKeloPlusCode(initialBoardString);
+
+  // 2) kopiujemy do wyświetlenia
+  const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
+
+  // 3) rozwiązanie
+  try { 
+    solveSudoku10(boardToSolve); 
+  } catch (e) { 
+    console.warn("solveSudoku10 error", e); 
   }
 
-  try { solveSudoku10(boardToSolve); } catch (e) { console.warn("solveSudoku10 error", e); }
-
-  const solvedBoardString = boardToSolve.flat().join("");
-
-  renderSudoku10(initialBoardString, "initial-sudoku-table");
-  renderSudoku10(solvedBoardString, "solution-sudoku-table", true);
+  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  renderSudoku10(initialBoard, "initial-sudoku-table");
+  renderSudoku10(boardToSolve, "solution-sudoku-table", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
-  document.getElementById("origin") &&
-    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
-  document.getElementById("notes") &&
-    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
-
-  activeSection = document.getElementById("sudoku-container");
 }
+
 
 
         /* --- SUDOKU 4x4 ---------------------------------------------------------- */
