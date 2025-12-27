@@ -1212,55 +1212,33 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
     table.appendChild(tr);
   });
 }
-function renderSudoku10(boardString, containerId, isSolution = false) {
-  const table = document.getElementById(containerId);
-  if (!table) return;
-  table.innerHTML = "";
+function renderSudoku10(board, containerId, solved = false) {
 
-  const board = [];
-  for (let i = 0; i < 100; i += 10) {
-    board.push(boardString.substring(i, i + 10).split('').map(Number));
-  }
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
 
-  board.forEach((row, rowIndex) => {
-    const tr = document.createElement("tr");
+    const table = document.createElement("table");
+    table.className = solved ? "sudoku10 solved" : "sudoku10";
 
-    row.forEach((cell, colIndex) => {
-      const td = document.createElement("td");
-      td.style.width = "10%";
-      td.style.paddingTop = "10%";
-      td.style.position = "relative";
-      td.style.border = "1px solid #888";
-      td.style.fontWeight = "bold";
-      td.style.fontSize = "16px";
+    for (let r = 0; r < 10; r++) {
+        const tr = document.createElement("tr");
 
-      const span = document.createElement("span");
-      span.style.position = "absolute";
-      span.style.top = "50%";
-      span.style.left = "50%";
-      span.style.transform = "translate(-50%, -50%)";
+        for (let c = 0; c < 10; c++) {
+            const td = document.createElement("td");
 
-      if (cell !== 0) {
-        span.innerText = cell;
-        if (isSolution) span.style.color = "#4CAF50";
-      }
+            const val = board[r][c];
 
-      td.appendChild(span);
+            td.textContent = val === 0 ? "" : val;
 
-      // blok 2x5
-      if ((colIndex + 1) % 5 === 0 && colIndex < 9) {
-        td.style.borderRight = "3px solid #000";
-      }
-      if ((rowIndex + 1) % 2 === 0 && rowIndex < 9) {
-        td.style.borderBottom = "3px solid #000";
-      }
+            tr.appendChild(td);
+        }
 
-      tr.appendChild(td);
-    });
+        table.appendChild(tr);
+    }
 
-    table.appendChild(tr);
-  });
+    container.appendChild(table);
 }
+
 
 
 function solveSudoku4(board) {
@@ -1297,25 +1275,56 @@ function solveSudoku4(board) {
   }
   return true;
 }
-  function solveSudoku10(board) {
-  for (let row = 0; row < 10; row++) {
-    for (let col = 0; col < 10; col++) {
+  function isValid10(board, row, col, num) {
 
-      if (board[row][col] === 0) {
-
-        for (let num = 1; num <= 10; num++) {
-          if (isValid10(board, row, col, num)) {
-            board[row][col] = num;
-            if (solveSudoku10(board)) return true;
-            board[row][col] = 0;
-          }
-        }
-
-        return false;
-      }
+    // wiersz
+    for (let x = 0; x < 10; x++) {
+        if (board[row][x] === num) return false;
     }
-  }
-  return true;
+
+    // kolumna
+    for (let y = 0; y < 10; y++) {
+        if (board[y][col] === num) return false;
+    }
+
+    // blok 2x5 lub 5x2? — wybieramy 2x5
+    const boxRow = Math.floor(row / 2) * 2;
+    const boxCol = Math.floor(col / 5) * 5;
+
+    for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 5; c++) {
+            if (board[boxRow + r][boxCol + c] === num) return false;
+        }
+    }
+
+    return true;
+}
+
+
+function solveSudoku10(board) {
+
+    for (let row = 0; row < 10; row++) {
+        for (let col = 0; col < 10; col++) {
+
+            if (board[row][col] === 0) {
+
+                for (let num = 1; num <= 10; num++) {
+
+                    if (isValid10(board, row, col, num)) {
+                        board[row][col] = num;
+
+                        if (solveSudoku10(board)) return true;
+
+                        board[row][col] = 0;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 
@@ -1352,30 +1361,30 @@ function isValid4(board, row, col, num) {
 
   return true;
 }
-  function isValid10(board, row, col, num) {
+ function parseBoard10FromKeloPlusCode(code) {
 
-  // wiersz
-  for (let i = 0; i < 10; i++) {
-    if (board[row][i] === num) return false;
-  }
+    const cleaned = code.trim();
 
-  // kolumna
-  for (let i = 0; i < 10; i++) {
-    if (board[i][col] === num) return false;
-  }
-
-  // blok 2x5
-  const boxRow = Math.floor(row / 2) * 2;
-  const boxCol = Math.floor(col / 5) * 5;
-
-  for (let r = 0; r < 2; r++) {
-    for (let c = 0; c < 5; c++) {
-      if (board[boxRow + r][boxCol + c] === num) return false;
+    if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+        throw new Error("Nieprawidłowy format KeloPlusCode 10x10.");
     }
-  }
 
-  return true;
+    const inner = cleaned.slice(1, -1);
+
+    const arr = inner.split(",").map(x => Number(x.trim()));
+
+    if (arr.length !== 100) {
+        throw new Error("Kod nie zawiera 100 elementów.");
+    }
+
+    const board = [];
+    for (let i = 0; i < 100; i += 10) {
+        board.push(arr.slice(i, i + 10));
+    }
+
+    return board;
 }
+
 
 
 
@@ -1460,37 +1469,33 @@ function show4x4() {
 
   renderSudoku6(board.flat().join(""), "solution-sudoku-table-6x6", true);
 }
-  function show10x10() {
-  const input = document.getElementById("kelo-code-10x10").value.trim();
-  if (!input) { alert("Wpisz kod."); return; }
+ let currentBoard10x10 = [];
 
-  const decoded = decodeSudokuCode10(input);
-  const boardString = decoded.board;
+function showSudoku10() {
 
-  if (!boardString || boardString.length !== 100) {
-    alert("Nieprawidłowy format. Oczekiwane 100 znaków (0 = puste).");
-    return;
-  }
+    const input = document.getElementById("kelo-code-10x10").value.trim();
 
-  // render planszy początkowej
-  renderSudoku10(boardString, "initial-sudoku-table-10x10", false);
+    try {
+        const board = parseBoard10FromKeloPlusCode(input);
 
-  // przygotuj tablicę do rozwiązania
-  const board = [];
-  for (let i = 0; i < 100; i += 10) {
-    board.push(boardString.substring(i, i + 10).split("").map(Number));
-  }
+        currentBoard10x10 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
 
-  const ok = solveSudoku10(board);
-  if (!ok) {
-    alert("Nie znaleziono rozwiązania.");
-    document.getElementById("solution-sudoku-table-10x10").innerHTML = "";
-    return;
-  }
+        renderSudoku10(board, "initial-sudoku-table-10x10");
 
-  const solvedString = board.flat().join("");
-  renderSudoku10(solvedString, "solution-sudoku-table-10x10", true);
+        const solved = solveSudoku10(board);
+
+        if (!solved) {
+            alert("Nie znaleziono rozwiązania sudoku 10x10.");
+            return;
+        }
+
+        renderSudoku10(board, "solution-sudoku-table-10x10", true);
+
+    } catch (e) {
+        alert("Błąd: " + e.message);
+    }
 }
+
 
 
 function submitRating(ratingType) {
