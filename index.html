@@ -985,7 +985,7 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 144) {
     // Kod wykona się tylko, gdy oba warunki są spełnione
 
-  // 1) zamiana KeloPlusCode -> tablica 10x10
+  // 1) zamiana KeloPlusCode -> tablica 12x12
   const boardToSolve = parseBoard12FromKeloPlusCode(initialBoardString);
 
   // 2) kopiujemy do wyświetlenia
@@ -1001,6 +1001,36 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
   renderSudoku12(initialBoard, "initial-sudoku-table");
   renderSudoku12(boardToSolve, "solution-sudoku-table", true);
+
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
+  /* --- SUDOKU 14x14 ---------------------------------------------------------- */
+else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 196) {
+    // Kod wykona się tylko, gdy oba warunki są spełnione
+
+  // 1) zamiana KeloPlusCode -> tablica 14x14
+  const boardToSolve = parseBoard14FromKeloPlusCode(initialBoardString);
+
+  // 2) kopiujemy do wyświetlenia
+  const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
+
+  // 3) rozwiązanie
+  try { 
+    solveSudoku14(boardToSolve); 
+  } catch (e) { 
+    console.warn("solveSudoku14 error", e); 
+  }
+
+  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  renderSudoku14(initialBoard, "initial-sudoku-table");
+  renderSudoku14(boardToSolve, "solution-sudoku-table", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
@@ -1066,7 +1096,7 @@ else if (initialBoardString.length === 64) {
         else {
           const em = document.getElementById("error-message");
           if (em) {
-            em.innerText = "Nieprawidłowy format planszy (oczekiwane 81 lub 16 znaków)";
+            em.innerText = "Nieprawidłowy format planszy (oczekiwane 16, 36, 64, 81, 100 lub 144 znaki)";
             em.style.display = "block";
           }
           activeSection = null;
@@ -1389,7 +1419,64 @@ function renderSudoku12(board, containerId, isSolution = false) {
   });
 }
 
+function renderSudoku14(board, containerId, isSolution = false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
 
+  table.innerHTML = "";
+
+  // board to już tablica 14x14
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+
+      // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
+      td.style.width = "10%";
+      td.style.paddingTop = "10%";          // kwadrat
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "16px";
+
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
+
+      if (cell !== 0) {
+        span.innerText = cell;
+
+        // zielone jak wyżej
+        if (isSolution) {
+          span.style.color = "#4CAF50";
+        }
+      }
+
+      td.appendChild(span);
+
+      // ===========================
+      // pogrubione granice bloków 2x7
+      // ===========================
+
+      // pionowe podziałki co 4 kolumny
+      if ((colIndex + 1) % 7 === 0 && colIndex < 8) {
+        td.style.borderRight = "3px solid #000";
+      }
+
+      // poziome podziałki co 2 wiersze
+      if ((rowIndex + 1) % 3 === 0 && rowIndex < 13) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
 
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
@@ -1474,6 +1561,30 @@ for (let r = 0; r < 3; r++) { // Blok ma 3 wiersze
     return true;
 }
 
+function isValid14(board, row, col, num) {
+
+    // wiersz
+    for (let x = 0; x < 14; x++) {
+        if (board[row][x] === num) return false;
+    }
+
+    // kolumna
+    for (let y = 0; y < 14; y++) {
+        if (board[y][col] === num) return false;
+    }
+
+    // blok 2x7 lub 7x2? — wybieramy 2x7
+    const boxRow = Math.floor(row / 2) * 2;
+    const boxCol = Math.floor(col / 7) * 7;
+
+for (let r = 0; r < 2; r++) { // Blok ma 2 wiersze
+        for (let c = 0; c < 7; c++) { // Blok ma 7 kolumn
+            if (board[boxRow + r][boxCol + c] === num) return false;
+        }
+    }
+
+    return true;
+}
 
 function solveSudoku10(board) {
 
@@ -1526,7 +1637,31 @@ function solveSudoku12(board) {
     return true;
 }
 
+function solveSudoku14(board) {
 
+    for (let row = 0; row < 14; row++) {
+        for (let col = 0; col < 14; col++) {
+
+            if (board[row][col] === 0) {
+
+                for (let num = 1; num <= 14; num++) {
+
+                    if (isValid14(board, row, col, num)) {
+                        board[row][col] = num;
+
+                        if (solveSudoku14(board)) return true;
+
+                        board[row][col] = 0;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
 
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
@@ -1588,7 +1723,7 @@ function isValid4(board, row, col, num) {
     const cleaned = code.trim();
 
     if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
-        throw new Error("Nieprawidłowy format KeloPlusCode 10x10.");
+        throw new Error("Nieprawidłowy format KeloPlusCode 12x12.");
     }
 
     const inner = cleaned.slice(1, -1);
@@ -1607,7 +1742,29 @@ function isValid4(board, row, col, num) {
     return board;
 }
 
+function parseBoard14FromKeloPlusCode(code) {
 
+    const cleaned = code.trim();
+
+    if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+        throw new Error("Nieprawidłowy format KeloPlusCode 14x14.");
+    }
+
+    const inner = cleaned.slice(1, -1);
+
+    const arr = inner.split(",").map(x => Number(x.trim()));
+
+    if (arr.length !== 196) {
+        throw new Error("Kod nie zawiera 196 elementów.");
+    }
+
+    const board = [];
+    for (let i = 0; i < 196; i += 14) {
+        board.push(arr.slice(i, i + 14));
+    }
+
+    return board;
+}
 
 
 function decodeSudokuCode4(code) {
@@ -1769,6 +1926,30 @@ function showSudoku10() {
         }
 
         renderSudoku12(board, "solution-sudoku-table-12x12", true);
+
+    } catch (e) {
+        alert("Błąd: " + e.message);
+    }
+}
+   function showSudoku14() {
+
+    const input = document.getElementById("kelo-code-14x14").value.trim();
+
+    try {
+        const board = parseBoard14FromKeloPlusCode(input);
+
+        currentBoard14x14 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
+
+        renderSudoku14(board, "initial-sudoku-table-14x14");
+
+        const solved = solveSudoku14(board);
+
+        if (!solved) {
+            alert("Nie znaleziono rozwiązania sudoku 14x14.");
+            return;
+        }
+
+        renderSudoku14(board, "solution-sudoku-table-14x14", true);
 
     } catch (e) {
         alert("Błąd: " + e.message);
