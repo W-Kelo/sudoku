@@ -953,7 +953,7 @@ else if (initialBoardString.length === 36) {
   activeSection = document.getElementById("sudoku-container");
 }
 /* --- SUDOKU 10x10 ---------------------------------------------------------- */
-else if (initialBoardString.trim().startsWith("[")) {
+else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 100) {
 
   // 1) zamiana KeloPlusCode -> tablica 10x10
   const boardToSolve = parseBoard10FromKeloPlusCode(initialBoardString);
