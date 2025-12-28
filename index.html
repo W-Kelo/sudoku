@@ -212,7 +212,6 @@
 
       <p>Rozwiązanie:</p>
       <table class="sudoku-table" id="solution-sudoku-table"></table>
-      <button onclick="openSudokuModal()">Powiększ</button>
 
       <div class="info-container">
         <p><strong>Poziom trudności:</strong> <span id="difficulty-level"></span></p>
@@ -433,12 +432,7 @@
   </div>
   
 
-<div id="sudoku-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; overflow:auto; padding:20px;">
-    <div style="background:white; margin:auto; width:90%; max-width:800px; padding:20px; border-radius:8px; position:relative;">
-        <span onclick="closeSudokuModal()" style="position:absolute; top:10px; right:20px; font-size:30px; cursor:pointer;">&times;</span>
-        <table id="modal-sudoku-table" style="width:100%; border-collapse: collapse;"></table>
-    </div>
-</div>
+
 <footer style="margin-top:40px;padding:16px 8px;text-align:center;font-size:0.9em;color:#555;border-top:1px solid #ddd;">
   <p style="margin:4px 0;">
     Strona nie zbiera danych osobowych. W celu zapamiętania oddanych ocen korzysta z <strong>localStorage</strong> przeglądarki (nie są to pliki cookie).
@@ -1971,23 +1965,7 @@ function showSudoku10() {
         alert("Błąd: " + e.message);
     }
 }
-function openSudokuModal() {
-    if (!currentBoard14x14) {
-        alert("Najpierw wygeneruj sudoku!");
-        return;
-    }
-    
-    // Pokaż modal
-    document.getElementById("sudoku-modal").style.display = "block";
-    
-    // Wyrenderuj to samo sudoku wewnątrz modala
-    // Używamy kopii, żeby nie zmieniać oryginału
-    renderSudoku14(currentBoard14x14, "modal-sudoku-table");
-}
 
-function closeSudokuModal() {
-    document.getElementById("sudoku-modal").style.display = "none";
-}
 // ========================= SUDOKU 8x8 ==============================
 
 function renderSudoku8(boardString, containerId, isSolution = false) {
