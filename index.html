@@ -981,6 +981,30 @@ else if (initialBoardString.trim().startsWith("[")) {
 
   activeSection = document.getElementById("sudoku-container");
 }
+/* --- SUDOKU 8x8 ---------------------------------------------------------- */
+else if (initialBoardString.length === 64) {
+
+  const boardToSolve = [];
+  for (let i = 0; i < 64; i += 8) {
+    boardToSolve.push(initialBoardString.substring(i, i + 8).split("").map(Number));
+  }
+
+  try { solveSudoku8(boardToSolve); } catch(e){ console.warn("solveSudoku8 error", e); }
+
+  const solvedBoardString = boardToSolve.flat().join("");
+
+  renderSudoku8(initialBoardString, "initial-sudoku-table");
+  renderSudoku8(solvedBoardString, "solution-sudoku-table", true);
+           
+  document.getElementById("difficulty-level") &&
+  (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+  (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+  (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
 
 
 
@@ -1480,6 +1504,39 @@ function show4x4() {
   const solvedString = board.flat().join("");
   renderSudoku4(solvedString, "solution-sudoku-table-4x4", true);
 }
+  function show8x8() {
+
+  const input = document.getElementById("kelo-code-8x8").value.trim();
+  if (!input) { alert("Wpisz kod."); return; }
+
+  const decoded = decodeSudokuCode8(input);
+  const boardString = decoded.board;
+
+  if (!boardString || boardString.length !== 64) {
+    alert("Nieprawidłowy format. Oczekiwane 64 znaki (0=puste).");
+    return;
+  }
+
+  // pokaż planszę startową
+  renderSudoku8(boardString, "initial-sudoku-table-8x8");
+
+  // przygotuj tablicę 8×8
+  const board = [];
+  for (let i = 0; i < 64; i += 8) {
+    board.push(boardString.substring(i, i + 8).split("").map(Number));
+  }
+
+  const ok = solveSudoku8(board);
+
+  if (!ok) {
+    alert("Nie znaleziono rozwiązania sudoku 8×8.");
+    document.getElementById("solution-sudoku-table-8x8").innerHTML = "";
+    return;
+  }
+
+  // render rozwiązania
+  renderSudoku8(board.flat().join(""), "solution-sudoku-table-8x8", true);
+}
   function show6x6() {
   const input = document.getElementById("kelo-code-6x6").value.trim();
   if (!input) { alert("Wpisz kod."); return; }
@@ -1535,7 +1592,125 @@ function showSudoku10() {
     }
 }
 
+// ========================= SUDOKU 8x8 ==============================
 
+function renderSudoku8(boardString, containerId, isSolution = false) {
+
+  const table = document.getElementById(containerId);
+  if (!table) return;
+
+  table.innerHTML = "";
+
+  // zamiana na tablicę 8×8
+  const board = [];
+  for (let i = 0; i < 64; i += 8) {
+    board.push(boardString.substring(i, i + 8).split("").map(Number));
+  }
+
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+
+      const td = document.createElement("td");
+      td.style.width = "12.5%";
+      td.style.paddingTop = "12.5%";
+      td.style.position = "relative";
+      td.style.border = "1px solid #888";
+      td.style.fontWeight = "bold";
+      td.style.fontSize = "18px";
+
+      const span = document.createElement("span");
+      span.style.position = "absolute";
+      span.style.top = "50%";
+      span.style.left = "50%";
+      span.style.transform = "translate(-50%, -50%)";
+
+      if (cell !== 0) {
+        span.textContent = cell;
+        if (isSolution) span.style.color = "#4CAF50";
+      }
+
+      td.appendChild(span);
+
+      // POGRUBIONE GRANICE BLOKÓW 2×4
+      if ((colIndex + 1) % 4 === 0 && colIndex < 7) {
+        td.style.borderRight = "3px solid #000";
+      }
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 7) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
+
+
+// ---------------------- solver ------------------------------------
+
+function isValid8(board, row, col, num) {
+
+  // wiersz
+  for (let i = 0; i < 8; i++) {
+    if (board[row][i] === num) return false;
+  }
+
+  // kolumna
+  for (let i = 0; i < 8; i++) {
+    if (board[i][col] === num) return false;
+  }
+
+  // blok 2x4
+  const boxRow = Math.floor(row / 2) * 2;
+  const boxCol = Math.floor(col / 4) * 4;
+
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (board[boxRow + r][boxCol + c] === num) return false;
+    }
+  }
+
+  return true;
+}
+
+
+function solveSudoku8(board) {
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+
+      if (board[row][col] === 0) {
+
+        for (let num = 1; num <= 8; num++) {
+
+          if (isValid8(board, row, col, num)) {
+            board[row][col] = num;
+
+            if (solveSudoku8(board)) return true;
+
+            board[row][col] = 0;
+          }
+        }
+
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+
+function decodeSudokuCode8(code) {
+  const parts = code.split(':');
+  if (parts.length >= 2) {
+    return { difficulty: parts[0], board: parts.slice(1).join(':') };
+  }
+  return { difficulty: "", board: code };
+}
 
 function submitRating(ratingType) {
   if (!activeSection) return;
