@@ -429,6 +429,14 @@
 </div>
 </div>
   </div>
+  <button onclick="openSudokuModal()">Powiększ tabelę</button>
+
+<div id="sudoku-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; overflow:auto; padding:20px;">
+    <div style="background:white; margin:auto; width:90%; max-width:800px; padding:20px; border-radius:8px; position:relative;">
+        <span onclick="closeSudokuModal()" style="position:absolute; top:10px; right:20px; font-size:30px; cursor:pointer;">&times;</span>
+        <table id="modal-sudoku-table" style="width:100%; border-collapse: collapse;"></table>
+    </div>
+</div>
 <footer style="margin-top:40px;padding:16px 8px;text-align:center;font-size:0.9em;color:#555;border-top:1px solid #ddd;">
   <p style="margin:4px 0;">
     Strona nie zbiera danych osobowych. W celu zapamiętania oddanych ocen korzysta z <strong>localStorage</strong> przeglądarki (nie są to pliki cookie).
@@ -1424,6 +1432,9 @@ function renderSudoku14(board, containerId, isSolution = false) {
   if (!table) return;
 
   table.innerHTML = "";
+  table.style.width = "100%"; // Dodaj to, aby tabela wypełniała modal
+  table.style.borderCollapse = "collapse"; // Aby ramki się nie dublowały
+
 
   // board to już tablica 14x14
   board.forEach((row, rowIndex) => {
@@ -1433,18 +1444,20 @@ function renderSudoku14(board, containerId, isSolution = false) {
       const td = document.createElement("td");
 
       // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
-      td.style.width = "10%";
-      td.style.paddingTop = "10%";          // kwadrat
-      td.style.position = "relative";
-      td.style.border = "1px solid #888";
-      td.style.fontWeight = "bold";
-      td.style.fontSize = "16px";
+// Stylizacja komórki tabeli (td)
+      td.style.width = "10%";               // Szerokość komórki ustawiona na 10% szerokości rodzica
+      td.style.paddingTop = "10%";          // Wewnętrzny górny margines; trik pozwalający uzyskać proporcje kwadratu
+      td.style.position = "relative";       // Pozycjonowanie relatywne (punkt odniesienia dla elementów wewnątrz)
+      td.style.border = "1px solid #888";   // Ramka o grubości 1px, ciągła, w kolorze szarym
+      td.style.fontWeight = "bold";         // Pogrubienie czcionki
+      td.style.fontSize = "14px";           // Rozmiar czcionki ustawiony na 16 pikseli
 
+      // Stylizacja elementu wewnątrz komórki (span)
       const span = document.createElement("span");
-      span.style.position = "absolute";
-      span.style.top = "50%";
-      span.style.left = "50%";
-      span.style.transform = "translate(-50%, -50%)";
+      span.style.position = "absolute";     // Pozycjonowanie absolutne względem komórki td
+      span.style.top = "50%";               // Przesunięcie górnej krawędzi do połowy wysokości rodzica
+      span.style.left = "50%";              // Przesunięcie lewej krawędzi do połowy szerokości rodzica
+      span.style.transform = "translate(-50%, -50%)"; // Idealne wyśrodkowanie elementu (cofnięcie o połowę jego własnych wymiarów)
 
       if (cell !== 0) {
         span.innerText = cell;
@@ -1461,13 +1474,13 @@ function renderSudoku14(board, containerId, isSolution = false) {
       // pogrubione granice bloków 2x7
       // ===========================
 
-      // pionowe podziałki co 4 kolumny
+      // pionowe podziałki co 7 kolumn
       if ((colIndex + 1) % 7 === 0 && colIndex < 8) {
         td.style.borderRight = "3px solid #000";
       }
 
       // poziome podziałki co 2 wiersze
-      if ((rowIndex + 1) % 3 === 0 && rowIndex < 13) {
+      if ((rowIndex + 1) % 2 === 0 && rowIndex < 13) {
         td.style.borderBottom = "3px solid #000";
       }
 
@@ -1955,7 +1968,23 @@ function showSudoku10() {
         alert("Błąd: " + e.message);
     }
 }
+function openSudokuModal() {
+    if (!currentBoard14x14) {
+        alert("Najpierw wygeneruj sudoku!");
+        return;
+    }
+    
+    // Pokaż modal
+    document.getElementById("sudoku-modal").style.display = "block";
+    
+    // Wyrenderuj to samo sudoku wewnątrz modala
+    // Używamy kopii, żeby nie zmieniać oryginału
+    renderSudoku14(currentBoard14x14, "modal-sudoku-table");
+}
 
+function closeSudokuModal() {
+    document.getElementById("sudoku-modal").style.display = "none";
+}
 // ========================= SUDOKU 8x8 ==============================
 
 function renderSudoku8(boardString, containerId, isSolution = false) {
