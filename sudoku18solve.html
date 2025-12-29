@@ -13,8 +13,10 @@
   --board-bg:white;
   --good:#c8facc;
   --bad:#ffd4d4;
-  --overlay:rgba(255,255,255,0.75);
+  --overlay:rgba(255,255,255,0.82);
 }
+
+/* ====== layout ====== */
 
 body{
   margin:0;
@@ -25,7 +27,6 @@ body{
   display:flex;
 }
 
-/* ====== główny grid ====== */
 #layout{
   display:grid;
   grid-template-columns: 280px 1fr;
@@ -33,20 +34,17 @@ body{
   height:100%;
 }
 
-/* ====== lewa kolumna – narzędzia ====== */
+/* ====== tools column ====== */
+
 #tools{
   border-right:1px solid #ccc;
   padding:12px;
   overflow-y:auto;
 }
 
-#tools h2{
-  margin-top:0;
-}
-
 .tool-group{
-  margin-bottom:12px;
-  padding-bottom:8px;
+  margin-bottom:14px;
+  padding-bottom:9px;
   border-bottom:1px solid #ddd;
 }
 
@@ -57,49 +55,51 @@ button{
   background:#007BFF;
   color:white;
   cursor:pointer;
-  margin:2px 0;
+  margin-top:4px;
   width:100%;
 }
 
-/* ====== prawa kolumna – plansza ====== */
+/* ====== board column ====== */
+
 #boardCol{
   position:relative;
-  overflow:auto; /* suwaki tylko tu */
+  overflow:auto;   /* suwaki poprawione */
   display:flex;
   justify-content:center;
   align-items:center;
 }
 
-/* kontener powiększenia */
+/* plansza wrap do zoomu */
+
 #boardWrap{
-  transition: transform .2s ease;
+  transform-origin: top left;
+  transition: transform .15s ease;
 }
 
-/* mgła przy stopie lub braku startu */
-#overlay{
+/* overlay paywall */
+
+#boardOverlay{
   position:absolute;
   top:0;
   left:0;
   right:0;
   bottom:0;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(7px);
   background:var(--overlay);
   display:flex;
   justify-content:center;
   align-items:center;
   font-size:22px;
+  z-index:3;
   font-weight:bold;
-  z-index:2;
-  pointer-events:none;
-  opacity:1;
 }
 
-#overlay.hidden{
-  opacity:0;
-  pointer-events:none;
+#boardOverlay.hidden{
+  display:none;
 }
 
-/* tabela sudoku */
+/* tabela */
+
 table{
   border-collapse:collapse;
   background:var(--board-bg);
@@ -122,17 +122,59 @@ input{
   background:transparent;
 }
 
-input:focus{
-  outline:2px solid #007BFF;
-}
-
 input.ok{background:var(--good);}
 input.bad{background:var(--bad);}
 
 .bold-r{border-right:3px solid black;}
 .bold-b{border-bottom:3px solid black;}
 
-/* ===== RESPONSYWNOŚĆ ====== */
+/* ===== toast ===== */
+
+#toasts{
+  position:fixed;
+  right:15px;
+  bottom:15px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  z-index:10;
+}
+
+.toast{
+  padding:10px 14px;
+  background:#333;
+  color:white;
+  border-radius:8px;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+  opacity:.95;
+}
+
+/* ===== modal ===== */
+
+#modalOverlay{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:20;
+}
+
+#modal{
+  background:white;
+  border-radius:12px;
+  padding:18px 22px;
+  max-width:420px;
+  text-align:center;
+}
+
+#modal h3{
+  margin-top:0;
+}
+
+/* ===== responsive ===== */
+
 @media(max-width:900px){
   #layout{
     grid-template-columns:1fr;
@@ -151,6 +193,7 @@ input.bad{background:var(--bad);}
 <div id="layout">
 
   <div id="tools">
+
     <h2>Narzędzia</h2>
 
     <div class="tool-group">
@@ -165,12 +208,16 @@ input.bad{background:var(--bad);}
     </div>
 
     <div class="tool-group">
+      <button id="hint">Podpowiedź</button>
+    </div>
+
+    <div class="tool-group">
       <button id="zoomIn">Powiększ</button>
       <button id="zoomOut">Pomniejsz</button>
     </div>
 
     <div class="tool-group">
-      <button id="hint">Podpowiedź</button>
+      <button id="save">Zapisz stan gry</button>
     </div>
 
     <div class="tool-group">
@@ -178,21 +225,54 @@ input.bad{background:var(--bad);}
     </div>
 
     <div id="msg"></div>
+
   </div>
 
   <div id="boardCol">
-    <div id="overlay">Rozpocznij czas aby grać</div>
+
+    <div id="boardOverlay">Rozpocznij czas aby grać</div>
 
     <div id="boardWrap">
       <table id="board"></table>
     </div>
+
   </div>
 
 </div>
 
-<script>
+<div id="toasts"></div>
 
-/* ====== PARAMETR ====== */
+<div id="modalOverlay">
+  <div id="modal">
+    <h3 id="modalTitle"></h3>
+    <p id="modalText"></p>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+
+<script>
+/* ===== utils ===== */
+
+function toast(text){
+  const t=document.createElement("div");
+  t.className="toast";
+  t.textContent=text;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+function openModal(title,text){
+  document.getElementById("modalTitle").textContent=title;
+  document.getElementById("modalText").textContent=text;
+  document.getElementById("modalOverlay").style.display="flex";
+}
+
+function closeModal(){
+  document.getElementById("modalOverlay").style.display="none";
+}
+
+/* ===== input ===== */
+
 function get(name){
   return new URLSearchParams(location.search).get(name);
 }
@@ -200,34 +280,49 @@ function get(name){
 const initialBoard = JSON.parse(get("board"));
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
 
-/* ====== TIMER ====== */
+/* ===== localStorage save ===== */
+
+document.getElementById("save").onclick=()=>{
+  localStorage.setItem("sudoku18_state",JSON.stringify(workBoard));
+  toast("Stan gry zapisany");
+};
+
+/* ===== TIMER ===== */
+
 let seconds=0,timerInt=null,started=false;
 
 function updateTimer(){
   seconds++;
   const m=Math.floor(seconds/60);
   const s=seconds%60;
-  document.getElementById("timer").textContent =
-    String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  timer.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-document.getElementById("start").onclick=()=>{
+start.onclick=()=>{
   if(!timerInt){
     timerInt=setInterval(updateTimer,1000);
     started=true;
-    document.getElementById("overlay").classList.add("hidden");
+    boardOverlay.classList.add("hidden");
   }
 };
 
-document.getElementById("stop").onclick=()=>{
+stop.onclick=()=>{
   clearInterval(timerInt);
   timerInt=null;
-  document.getElementById("overlay").textContent="Czas zatrzymany";
-  document.getElementById("overlay").classList.remove("hidden");
+  boardOverlay.textContent="Czas zatrzymany";
+  boardOverlay.classList.remove("hidden");
 };
 
-/* ===== AUDIO STABILNE ===== */
+/* ===== AUDIO ===== */
+
 let audioCtx;
+let soundEnabled=true;
+
+sound.onclick=()=>{
+  soundEnabled=!soundEnabled;
+  sound.textContent= soundEnabled ? "Dźwięk: włączony" : "Dźwięk: wyłączony";
+};
+
 function beep(freq){
   if(!soundEnabled) return;
 
@@ -246,35 +341,35 @@ function beep(freq){
   g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.2);
 }
 
-let soundEnabled=true;
-document.getElementById("sound").onclick=()=>{
-  soundEnabled=!soundEnabled;
-  document.getElementById("sound").textContent =
-    soundEnabled ? "Dźwięk: włączony" : "Dźwięk: wyłączony";
-};
-
 /* ===== LOGIKA ===== */
+
 function isValid(board,r,c,val){
-  for(let i=0;i<18;i++) if(board[r][i]===val && i!==c) return false;
-  for(let i=0;i<18;i++) if(board[i][c]===val && i!==r) return false;
+  for(let i=0;i<18;i++)
+    if(board[r][i]===val && i!==c) return false;
+
+  for(let i=0;i<18;i++)
+    if(board[i][c]===val && i!==r) return false;
 
   const br=Math.floor(r/3)*3;
   const bc=Math.floor(c/6)*6;
 
   for(let i=0;i<3;i++)
     for(let j=0;j<6;j++){
-      const rr=br+i, cc=bc+j;
-      if(board[rr][cc]===val && !(rr===r&&cc===c)) return false;
+      const rr=br+i,cc=bc+j;
+      if(board[rr][cc]===val && !(rr===r&&cc===c))
+        return false;
     }
 
   return true;
 }
 
-/* ===== RYSOWANIE PLANSZY ===== */
+/* ===== RENDER BOARD ===== */
+
 const table=document.getElementById("board");
 
 for(let r=0;r<18;r++){
   const tr=document.createElement("tr");
+
   for(let c=0;c<18;c++){
     const td=document.createElement("td");
 
@@ -293,38 +388,42 @@ for(let r=0;r<18;r++){
     td.appendChild(input);
     tr.appendChild(td);
   }
+
   table.appendChild(tr);
 }
 
 /* ===== TRYBY ===== */
+
 let mode="later";
 
-document.getElementById("modeInstant").onclick=()=>{
+modeInstant.onclick=()=>{
   mode="instant";
-  msg.textContent="Tryb: sprawdzaj od razu";
-};
-document.getElementById("modeLater").onclick=()=>{
-  mode="later";
-  msg.textContent="Tryb: najpierw rozwiąż";
+  toast("Tryb: sprawdzaj od razu");
 };
 
-/* ===== WPISYWANIE ===== */
+modeLater.onclick=()=>{
+  mode="later";
+  toast("Tryb: najpierw rozwiąż");
+};
+
+/* ===== INPUT HANDLER ===== */
+
 function onInput(r,c,input){
 
   if(!started){
-    document.getElementById("overlay").textContent="Rozpocznij czas aby grać";
-    document.getElementById("overlay").classList.remove("hidden");
+    boardOverlay.textContent="Rozpocznij czas aby grać";
+    boardOverlay.classList.remove("hidden");
     input.value="";
     return;
   }
 
   let v=input.value.trim();
-  if(v==="" ){ workBoard[r][c]=0; return; }
+  if(v===""){workBoard[r][c]=0;return;}
 
-  if(!/^[0-9]{1,2}$/.test(v)){ input.value=""; return; }
+  if(!/^[0-9]{1,2}$/.test(v)){input.value="";return;}
 
   const num=parseInt(v);
-  if(num<1||num>18){ input.value=""; return; }
+  if(num<1||num>18){input.value="";return;}
 
   workBoard[r][c]=num;
 
@@ -343,21 +442,57 @@ function onInput(r,c,input){
   checkFinished();
 }
 
-/* ===== ZOOM PLANSZY ===== */
+/* ===== ZOOM ===== */
+
 let zoom=1;
 
-document.getElementById("zoomIn").onclick=()=>{
-  zoom*=1.2;
-  document.getElementById("boardWrap").style.transform=`scale(${zoom})`;
+zoomIn.onclick=()=>{
+  zoom*=1.25;
+  boardWrap.style.transform=`scale(${zoom})`;
+  boardCol.scrollTop=0; /* pozwala wrócić do góry */
 };
 
-document.getElementById("zoomOut").onclick=()=>{
-  zoom/=1.2;
-  document.getElementById("boardWrap").style.transform=`scale(${zoom})`;
+zoomOut.onclick=()=>{
+  zoom/=1.25;
+  boardWrap.style.transform=`scale(${zoom})`;
 };
 
-/* ===== KONIEC GRY ===== */
+/* ===== PODPOWIEDŹ – NAPRAWIONA ===== */
+
+hint.onclick=()=>{
+
+  const empty=[];
+
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++)
+      if(workBoard[r][c]===0)
+        empty.push([r,c]);
+
+  if(!empty.length){
+    toast("Brak pustych pól");
+    return;
+  }
+
+  const [r,c]=empty[Math.floor(Math.random()*empty.length)];
+
+  for(let v=1;v<=18;v++){
+    if(isValid(workBoard,r,c,v)){
+      workBoard[r][c]=v;
+      const inp=table.rows[r].cells[c].firstChild;
+      inp.value=v;
+      inp.classList.add("ok");
+      beep(1000);
+      break;
+    }
+  }
+
+  checkFinished();
+};
+
+/* ===== SPRAWDZENIE KOŃCA GRY ===== */
+
 function checkFinished(){
+
   for(let r=0;r<18;r++)
     for(let c=0;c<18;c++){
       const v=workBoard[r][c];
@@ -365,10 +500,13 @@ function checkFinished(){
       if(!isValid(workBoard,r,c,v)) return;
     }
 
-  msg.textContent="Gratulacje! Poprawne rozwiązanie!";
   beep(1300);
+
+  openModal(
+    "Gratulacje!",
+    "Rozwiązałeś poprawnie sudoku 18×18!"
+  );
 }
 </script>
-
 </body>
 </html>
