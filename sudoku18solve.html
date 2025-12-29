@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8">
+<title>Sudoku 18×18 – tryb rozwiązywania, wersja beta</title>
+
+<style>
+body{
+  margin:0;
+  background:#f0f2f5;
+  font-family:Arial, sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+.controls{
+  margin:15px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+button{
+  padding:8px 14px;
+  border:none;
+  border-radius:6px;
+  background:#007BFF;
+  color:white;
+  cursor:pointer;
+}
+
+button.red{background:#c0392b;}
+button.green{background:#27ae60;}
+button.orange{background:#e67e22;}
+
+#timer{
+  font-size:20px;
+  font-weight:bold;
+  margin-left:10px;
+}
+
+table{
+  border-collapse:collapse;
+  width:95vmin;
+  height:95vmin;
+  table-layout:fixed;
+  background:white;
+  box-shadow:0 8px 20px rgba(0,0,0,.15);
+}
+
+td{
+  border:1px solid #888;
+  position:relative;
+}
+
+input{
+  width:100%;
+  height:100%;
+  border:none;
+  text-align:center;
+  font-size:calc(45vmin / 18);
+  font-weight:bold;
+}
+
+input:focus{
+  outline:2px solid #007BFF;
+}
+
+.bold-r{border-right:3px solid black;}
+.bold-b{border-bottom:3px solid black;}
+
+.ok{background:#c8facc;}
+.bad{background:#ffd4d4;}
+
+#msg{
+  font-size:18px;
+  font-weight:bold;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Sudoku 18×18 – tryb rozwiązywania, wersja beta</h2>
+
+<div class="controls">
+  <button id="start">Start czasu</button>
+  <button id="stop">Stop czasu</button>
+  <span id="timer">00:00</span>
+
+  <button id="modeInstant" class="orange">Tryb „sprawdzaj od razu”</button>
+  <button id="modeLater" class="orange">Tryb „najpierw rozwiąż”</button>
+
+  <button id="hint" class="green">Podpowiedź w losowej komórce</button>
+
+  <button id="sound" class="orange">🔊 dźwięk włączony</button>
+</div>
+
+<table id="board"></table>
+
+<div id="msg"></div>
+
+<script>
+/* ------------------- PARAMETRY ------------------- */
+function get(name){
+  return new URLSearchParams(location.search).get(name);
+}
+
+const initialBoard = JSON.parse(get("board"));
+
+/* ------------------- TIMER ------------------- */
+let seconds=0, timerInt=null;
+
+function updateTimer(){
+  seconds++;
+  const m=Math.floor(seconds/60);
+  const s=seconds%60;
+  document.getElementById("timer").textContent =
+    String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+}
+
+document.getElementById("start").onclick=()=>{
+  if(!timerInt) timerInt=setInterval(updateTimer,1000);
+};
+document.getElementById("stop").onclick=()=>{
+  clearInterval(timerInt);
+  timerInt=null;
+};
+
+/* ------------------- AUDIO ------------------- */
+let soundEnabled=true;
+document.getElementById("sound").onclick=()=>{
+  soundEnabled=!soundEnabled;
+  document.getElementById("sound").textContent =
+    soundEnabled ? "🔊 dźwięk włączony" : "🔇 dźwięk wyłączony";
+};
+
+function beep(freq,color){
+  if(!soundEnabled) return;
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const o=ctx.createOscillator();
+  const g=ctx.createGain();
+  o.frequency.value=freq;
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.3);
+}
+
+/* ------------------- LOGIKA SUDOKU 18x18 ------------------- */
+function isValid(board,r,c,val){
+  // wiersz
+  for(let i=0;i<18;i++) if(board[r][i]==val) return false;
+
+  // kolumna
+  for(let i=0;i<18;i++) if(board[i][c]==val) return false;
+
+  // blok 3x6
+  const br=Math.floor(r/3)*3;
+  const bc=Math.floor(c/6)*6;
+  for(let i=0;i<3;i++)
+    for(let j=0;j<6;j++)
+      if(board[br+i][bc+j]==val) return false;
+
+  return true;
+}
+
+/* ------------------- GENEROWANIE TABLICY ------------------- */
+const table=document.getElementById("board");
+const workBoard=JSON.parse(JSON.stringify(initialBoard));
+
+for(let r=0;r<18;r++){
+  const tr=document.createElement("tr");
+  for(let c=0;c<18;c++){
+    const td=document.createElement("td");
+
+    if((c+1)%6===0 && c<17) td.classList.add("bold-r");
+    if((r+1)%3===0 && r<17) td.classList.add("bold-b");
+
+    const input=document.createElement("input");
+
+    if(initialBoard[r][c]!==0){
+      input.value=initialBoard[r][c];
+      input.disabled=true;
+      input.style.background="#eee";
+    } else {
+      input.value="";
+      input.oninput=()=>onInput(r,c,input);
+    }
+
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+
+/* ------------------- TRYBY ------------------- */
+let mode="later"; // "instant" lub "later"
+
+document.getElementById("modeInstant").onclick=()=>{
+  mode="instant";
+  document.getElementById("msg").textContent="Tryb: sprawdzaj od razu";
+};
+document.getElementById("modeLater").onclick=()=>{
+  mode="later";
+  document.getElementById("msg").textContent="Tryb: najpierw rozwiąż";
+};
+
+/* ------------------- OBSŁUGA WPISU ------------------- */
+function onInput(r,c,input){
+  let v=input.value.trim();
+
+  if(v===""){ workBoard[r][c]=0; return; }
+
+  if(!/^[0-9]{1,2}$/.test(v)){ input.value=""; return; }
+
+  const num=parseInt(v);
+
+  if(num<1||num>18){ input.value=""; return; }
+
+  if(mode==="instant"){
+    if(isValid(workBoard,r,c,num)){
+      input.classList.remove("bad");
+      input.classList.add("ok");
+      beep(900);
+      workBoard[r][c]=num;
+    } else {
+      input.classList.remove("ok");
+      input.classList.add("bad");
+      beep(200);
+    }
+  } else {
+    workBoard[r][c]=num;
+  }
+
+  checkFinished();
+}
+
+/* ------------------- SPRAWDZENIE KOŃCOWE ------------------- */
+function checkFinished(){
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++)
+      if(workBoard[r][c]===0 || !isValid(workBoard,r,c,workBoard[r][c]))
+        return;
+
+  document.getElementById("msg").textContent="Gratulacje! Poprawne rozwiązanie!";
+  beep(1200);
+}
+
+/* ------------------- PODPOWIEDŹ ------------------- */
+document.getElementById("hint").onclick=()=>{
+
+  const empty=[];
+
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++)
+      if(workBoard[r][c]===0)
+        empty.push([r,c]);
+
+  if(empty.length===0) return;
+
+  const [r,c]=empty[Math.floor(Math.random()*empty.length)];
+
+  for(let v=1;v<=18;v++){
+    if(isValid(workBoard,r,c,v)){
+      workBoard[r][c]=v;
+      const input=table.rows[r].cells[c].firstChild;
+      input.value=v;
+      input.classList.add("ok");
+      beep(1000);
+      break;
+    }
+  }
+};
+</script>
+</body>
+</html>
