@@ -1,14 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="icon" type="image/png" href="favicon.png">
 <meta charset="UTF-8">
+ <link rel="icon" type="image/png" href="favicon.png">
 <title>Sudoku 18×18 – tryb rozwiązywania, wersja beta</title>
 
 <style>
+
+:root{
+  --bg:#f0f2f5;
+  --fg:#222;
+  --board-bg:white;
+  --good:#c8facc;
+  --bad:#ffd4d4;
+  --line:#888;
+  --bold:#000;
+}
+
+body.dark{
+  --bg:#121212;
+  --fg:#eee;
+  --board-bg:#1f1f1f;
+  --good:#1f3f1f;
+  --bad:#3a1c1c;
+  --line:#555;
+  --bold:#bbb;
+}
+
 body{
   margin:0;
-  background:#f0f2f5;
+  background:var(--bg);
+  color:var(--fg);
   font-family:Arial, sans-serif;
   display:flex;
   flex-direction:column;
@@ -18,7 +40,7 @@ body{
 .controls{
   margin:15px;
   display:flex;
-  gap:10px;
+  gap:8px;
   flex-wrap:wrap;
   justify-content:center;
 }
@@ -32,9 +54,7 @@ button{
   cursor:pointer;
 }
 
-button.red{background:#c0392b;}
-button.green{background:#27ae60;}
-button.orange{background:#e67e22;}
+button.small{padding:5px 10px;}
 
 #timer{
   font-size:20px;
@@ -42,17 +62,19 @@ button.orange{background:#e67e22;}
   margin-left:10px;
 }
 
+#boardWrap{
+  margin-top:8px;
+  transition:transform .2s ease;
+}
+
 table{
   border-collapse:collapse;
-  width:95vmin;
-  height:95vmin;
-  table-layout:fixed;
-  background:white;
+  background:var(--board-bg);
   box-shadow:0 8px 20px rgba(0,0,0,.15);
 }
 
 td{
-  border:1px solid #888;
+  border:1px solid var(--line);
   position:relative;
 }
 
@@ -61,25 +83,28 @@ input{
   height:100%;
   border:none;
   text-align:center;
-  font-size:calc(45vmin / 18);
   font-weight:bold;
+  background:transparent;
+  color:var(--fg);
 }
 
-input:focus{
-  outline:2px solid #007BFF;
-}
+input.ok{background:var(--good);}
+input.bad{background:var(--bad);}
 
-.bold-r{border-right:3px solid black;}
-.bold-b{border-bottom:3px solid black;}
+.bold-r{border-right:3px solid var(--bold);}
+.bold-b{border-bottom:3px solid var(--bold);}
 
-.ok{background:#c8facc;}
-.bad{background:#ffd4d4;}
+#msg{margin-top:10px;font-size:18px;font-weight:bold;}
 
-#msg{
-  font-size:18px;
-  font-weight:bold;
+#mobileKeys{
+  display:none;
   margin-top:10px;
+  gap:5px;
+  flex-wrap:wrap;
+  justify-content:center;
 }
+
+#mobileKeys button{width:40px;}
 </style>
 </head>
 
@@ -92,34 +117,61 @@ input:focus{
   <button id="stop">Stop czasu</button>
   <span id="timer">00:00</span>
 
-  <button id="modeInstant" class="orange">Tryb „sprawdzaj od razu”</button>
-  <button id="modeLater" class="orange">Tryb „najpierw rozwiąż”</button>
+  <button id="modeInstant">Tryb sprawdzaj od razu</button>
+  <button id="modeLater">Tryb najpierw rozwiąż</button>
 
-  <button id="hint" class="green">Podpowiedź w losowej komórce</button>
+  <button id="hint">Podpowiedź</button>
 
-  <button id="sound" class="orange">🔊 dźwięk włączony</button>
+  <button id="zoomIn" class="small">+</button>
+  <button id="zoomOut" class="small">−</button>
+
+  <button id="theme">Tryb ciemny / jasny</button>
+
+  <button id="sound">🔊</button>
+
+  <button id="save">Zapisz stan gry</button>
 </div>
 
-<table id="board"></table>
+<div id="boardWrap">
+  <table id="board"></table>
+</div>
 
 <div id="msg"></div>
 
+<div id="mobileKeys"></div>
+
 <script>
-/* ------------------- PARAMETRY ------------------- */
+/* --- PARAMETRY URL --- */
 function get(name){
   return new URLSearchParams(location.search).get(name);
 }
 
-const initialBoard = JSON.parse(get("board"));
+const initialFromUrl = JSON.parse(get("board"));
+let initialBoard = JSON.parse(JSON.stringify(initialFromUrl));
 
-/* ------------------- TIMER ------------------- */
-let seconds=0, timerInt=null;
+/* --- LOCAL STORAGE --- */
+const LS_KEY="sudoku18_state";
+if(localStorage.getItem(LS_KEY)){
+  try{
+    const saved=JSON.parse(localStorage.getItem(LS_KEY));
+    if(confirm("Wczytać zapisany stan gry?")){
+      initialBoard=saved;
+    }
+  }catch(e){}
+}
+
+document.getElementById("save").onclick=()=>{
+  localStorage.setItem(LS_KEY,JSON.stringify(workBoard));
+  alert("Stan zapisany w localStorage.");
+};
+
+/* --- TIMER --- */
+let seconds=0,timerInt=null;
 
 function updateTimer(){
   seconds++;
-  const m=Math.floor(seconds/60);
-  const s=seconds%60;
-  document.getElementById("timer").textContent =
+  const m=Math.floor(seconds/60),s=seconds%60;
+  document.getElementById("timer").textContent=
     String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
 }
 
@@ -131,151 +183,197 @@ document.getElementById("stop").onclick=()=>{
   timerInt=null;
 };
 
-/* ------------------- AUDIO ------------------- */
+/* --- AUDIO --- */
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(audioCtx.state==="suspended"){
+    audioCtx.resume().catch(()=>{});
+  }
+}
+function beep(freq){
+  if(!soundEnabled) return;
+  ensureAudio();
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.frequency.value=freq;
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.25);
+}
+
 let soundEnabled=true;
 document.getElementById("sound").onclick=()=>{
   soundEnabled=!soundEnabled;
-  document.getElementById("sound").textContent =
-    soundEnabled ? "🔊 dźwięk włączony" : "🔇 dźwięk wyłączony";
+  document.getElementById("sound").textContent=soundEnabled?"🔊":"🔇";
 };
 
-function beep(freq,color){
-  if(!soundEnabled) return;
-  const ctx=new (window.AudioContext||window.webkitAudioContext)();
-  const o=ctx.createOscillator();
-  const g=ctx.createGain();
-  o.frequency.value=freq;
-  o.connect(g);
-  g.connect(ctx.destination);
-  o.start();
-  g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.3);
-}
-
-/* ------------------- LOGIKA SUDOKU 18x18 ------------------- */
+/* --- LOGIKA SUDOKU --- */
 function isValid(board,r,c,val){
-  // wiersz
-  for(let i=0;i<18;i++) if(board[r][i]==val) return false;
+  for(let i=0;i<18;i++) if(board[r][i]===val) return false;
+  for(let i=0;i<18;i++) if(board[i][c]===val) return false;
 
-  // kolumna
-  for(let i=0;i<18;i++) if(board[i][c]==val) return false;
-
-  // blok 3x6
   const br=Math.floor(r/3)*3;
   const bc=Math.floor(c/6)*6;
+
   for(let i=0;i<3;i++)
     for(let j=0;j<6;j++)
-      if(board[br+i][bc+j]==val) return false;
+      if(board[br+i][bc+j]===val) return false;
 
   return true;
 }
 
-/* ------------------- GENEROWANIE TABLICY ------------------- */
+/* --- TWORZENIE PLANSZY --- */
 const table=document.getElementById("board");
 const workBoard=JSON.parse(JSON.stringify(initialBoard));
 
-for(let r=0;r<18;r++){
-  const tr=document.createElement("tr");
-  for(let c=0;c<18;c++){
-    const td=document.createElement("td");
+function buildBoard(){
+  table.innerHTML="";
+  const size=18;
 
-    if((c+1)%6===0 && c<17) td.classList.add("bold-r");
-    if((r+1)%3===0 && r<17) td.classList.add("bold-b");
+  // rozmiar w CSS
+  table.style.width="calc(95vmin - 60px)";
+  table.style.height="calc(95vmin - 60px)";
+  table.style.tableLayout="fixed";
 
-    const input=document.createElement("input");
+  for(let r=0;r<size;r++){
+    const tr=document.createElement("tr");
+    for(let c=0;c<size;c++){
+      const td=document.createElement("td");
 
-    if(initialBoard[r][c]!==0){
-      input.value=initialBoard[r][c];
-      input.disabled=true;
-      input.style.background="#eee";
-    } else {
-      input.value="";
-      input.oninput=()=>onInput(r,c,input);
+      if((c+1)%6===0 && c<size-1) td.classList.add("bold-r");
+      if((r+1)%3===0 && r<size-1) td.classList.add("bold-b");
+
+      const input=document.createElement("input");
+
+      if(initialBoard[r][c]!==0){
+        input.value=initialBoard[r][c];
+        input.disabled=true;
+      }else{
+        input.readOnly=true; // brak systemowej klawiatury
+        input.onclick=()=>currentInput=input;
+        input.oninput=()=>{};
+      }
+
+      td.appendChild(input);
+      tr.appendChild(td);
     }
-
-    td.appendChild(input);
-    tr.appendChild(td);
+    table.appendChild(tr);
   }
-  table.appendChild(tr);
 }
 
-/* ------------------- TRYBY ------------------- */
-let mode="later"; // "instant" lub "later"
+buildBoard();
+
+/* --- TRYBY --- */
+let mode="later";
 
 document.getElementById("modeInstant").onclick=()=>{
   mode="instant";
-  document.getElementById("msg").textContent="Tryb: sprawdzaj od razu";
+  msg.textContent="Tryb: sprawdzaj od razu";
 };
+
 document.getElementById("modeLater").onclick=()=>{
   mode="later";
-  document.getElementById("msg").textContent="Tryb: najpierw rozwiąż";
+  msg.textContent="Tryb: najpierw rozwiąż";
 };
 
-/* ------------------- OBSŁUGA WPISU ------------------- */
-function onInput(r,c,input){
-  let v=input.value.trim();
+/* --- KLAWIATURA MOBILNA --- */
+let currentInput=null;
 
-  if(v===""){ workBoard[r][c]=0; return; }
-
-  if(!/^[0-9]{1,2}$/.test(v)){ input.value=""; return; }
-
-  const num=parseInt(v);
-
-  if(num<1||num>18){ input.value=""; return; }
-
-  if(mode==="instant"){
-    if(isValid(workBoard,r,c,num)){
-      input.classList.remove("bad");
-      input.classList.add("ok");
-      beep(900);
-      workBoard[r][c]=num;
-    } else {
-      input.classList.remove("ok");
-      input.classList.add("bad");
-      beep(200);
-    }
-  } else {
-    workBoard[r][c]=num;
+function buildMobileKeys(){
+  const c=document.getElementById("mobileKeys");
+  c.innerHTML="";
+  for(let n=1;n<=18;n++){
+    const b=document.createElement("button");
+    b.textContent=n;
+    b.onclick=()=>applyNumber(n);
+    c.appendChild(b);
   }
+}
+buildMobileKeys();
 
+if(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)){
+  document.getElementById("mobileKeys").style.display="flex";
+}
+
+function applyNumber(num){
+  if(!currentInput) return;
+  const td=currentInput.parentElement;
+  const r=td.parentElement.rowIndex;
+  const c=td.cellIndex;
+
+  if(isValid(workBoard,r,c,num)){
+    currentInput.value=num;
+    currentInput.classList.add("ok");
+    currentInput.classList.remove("bad");
+    workBoard[r][c]=num;
+    beep(900);
+  }else{
+    currentInput.value=num;
+    currentInput.classList.add("bad");
+    currentInput.classList.remove("ok");
+    beep(200);
+  }
   checkFinished();
 }
 
-/* ------------------- SPRAWDZENIE KOŃCOWE ------------------- */
-function checkFinished(){
-  for(let r=0;r<18;r++)
-    for(let c=0;c<18;c++)
-      if(workBoard[r][c]===0 || !isValid(workBoard,r,c,workBoard[r][c]))
-        return;
-
-  document.getElementById("msg").textContent="Gratulacje! Poprawne rozwiązanie!";
-  beep(1200);
-}
-
-/* ------------------- PODPOWIEDŹ ------------------- */
+/* --- PODPOWIEDŹ --- */
 document.getElementById("hint").onclick=()=>{
-
   const empty=[];
-
   for(let r=0;r<18;r++)
     for(let c=0;c<18;c++)
       if(workBoard[r][c]===0)
         empty.push([r,c]);
 
-  if(empty.length===0) return;
+  if(!empty.length) return;
 
   const [r,c]=empty[Math.floor(Math.random()*empty.length)];
 
   for(let v=1;v<=18;v++){
     if(isValid(workBoard,r,c,v)){
       workBoard[r][c]=v;
-      const input=table.rows[r].cells[c].firstChild;
-      input.value=v;
-      input.classList.add("ok");
+      const inp=table.rows[r].cells[c].firstChild;
+      inp.value=v;
+      inp.classList.add("ok");
       beep(1000);
       break;
     }
   }
+  checkFinished();
 };
+
+/* --- POWIĘKSZANIE/ POMNIEJSZANIE --- */
+let zoom=1;
+document.getElementById("zoomIn").onclick=()=>{
+  zoom*=1.2;
+  boardWrap.style.transform=`scale(${zoom})`;
+};
+document.getElementById("zoomOut").onclick=()=>{
+  zoom/=1.2;
+  boardWrap.style.transform=`scale(${zoom})`;
+};
+
+/* --- MOTYW CIEMNY --- */
+document.getElementById("theme").onclick=()=>{
+  document.body.classList.toggle("dark");
+};
+
+/* --- SPRAWDZENIE ZAKOŃCZENIA --- */
+function checkFinished(){
+  for(let r=0;r<18;r++){
+    for(let c=0;c<18;c++){
+      const v=workBoard[r][c];
+      if(v===0) return;
+      if(!isValid(workBoard,r,c,v)) return;
+    }
+  }
+  msg.textContent="Gratulacje! Poprawne rozwiązanie!";
+  beep(1300);
+}
 </script>
+
 </body>
 </html>
