@@ -189,6 +189,23 @@
   background-color: #aaa;
   cursor: not-allowed;
 }
+    .open-new-tab-btn {
+  margin-top: 10px;
+  padding: 10px 18px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.open-new-tab-btn:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,.2);
+  transform: translateY(-1px);
+}
+
 
   </style>
 </head>
@@ -1609,6 +1626,13 @@ function renderSudoku15(board, containerId, isSolution = false) {
     table.appendChild(tr);
   });
 }
+function isDesktop() {
+  const mobileKeywords = [
+    'Android','webOS','iPhone','iPad',
+    'iPod','BlackBerry','IEMobile','Opera Mini'
+  ];
+  return !mobileKeywords.some(k => navigator.userAgent.includes(k));
+}
 
   function renderSudoku18(board, containerId, isSolution = false) {
   const table = document.getElementById(containerId);
@@ -1617,7 +1641,8 @@ function renderSudoku15(board, containerId, isSolution = false) {
   table.innerHTML = "";
   table.style.width = "100%"; // Dodaj to, aby tabela wypełniała modal
   table.style.borderCollapse = "collapse"; // Aby ramki się nie dublowały
-
+  table.dataset.board18 = JSON.stringify(board);
+  table.dataset.isSolution = isSolution ? "1" : "0";
 
   // board to już tablica 18x18
   board.forEach((row, rowIndex) => {
@@ -1668,7 +1693,43 @@ function renderSudoku15(board, containerId, isSolution = false) {
 
     table.appendChild(tr);
   });
+  maybeAddOpenButtonFor18();
 }
+  function maybeAddOpenButtonFor18() {
+
+  if (!isDesktop()) return;
+
+  const container = document.getElementById("sudoku-container");
+  if (!container) return;
+
+  // usuń stare przyciski
+  document.querySelectorAll(".open-new-tab-btn").forEach(b => b.remove());
+
+  const tables = [
+    document.getElementById("initial-sudoku-table"),
+    document.getElementById("solution-sudoku-table")
+  ];
+
+  tables.forEach((tbl, idx) => {
+    if (!tbl || !tbl.dataset.board18) return;
+
+    const btn = document.createElement("button");
+    btn.className = "open-new-tab-btn";
+    btn.textContent = "Otwórz planszę w nowej karcie";
+
+    btn.onclick = () => {
+      const url =
+        "sudoku18view.html?board=" +
+        encodeURIComponent(tbl.dataset.board18) +
+        "&solution=" + tbl.dataset.isSolution;
+
+      window.open(url, "_blank");
+    };
+
+    tbl.insertAdjacentElement("afterend", btn);
+  });
+}
+
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
