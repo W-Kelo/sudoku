@@ -1075,6 +1075,36 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 
   activeSection = document.getElementById("sudoku-container");
 }
+  /* --- SUDOKU 18x18 ---------------------------------------------------------- */
+else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 324) {
+    // Kod wykona się tylko, gdy oba warunki są spełnione
+
+  // 1) zamiana KeloPlusCode -> tablica 18x18
+  const boardToSolve = parseBoard18FromKeloPlusCode(initialBoardString);
+
+  // 2) kopiujemy do wyświetlenia
+  const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
+
+  // 3) rozwiązanie
+  try { 
+    solveSudoku18(boardToSolve); 
+  } catch (e) { 
+    console.warn("solveSudoku18 error", e); 
+  }
+
+  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  renderSudoku18(initialBoard, "initial-sudoku-table");
+  renderSudoku18(boardToSolve, "solution-sudoku-table", true);
+
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
 else if (initialBoardString.length === 64) {
 
@@ -1130,7 +1160,7 @@ else if (initialBoardString.length === 64) {
         else {
           const em = document.getElementById("error-message");
           if (em) {
-            em.innerText = "Nieprawidłowy format planszy (oczekiwane 16, 36, 64, 81, 100, 144, 196 lub 225 znaków)";
+            em.innerText = "Nieprawidłowy format planszy (oczekiwane 16, 36, 64, 81, 100, 144, 196, 225 lub 324 znaki)";
             em.style.display = "block";
           }
           activeSection = null;
@@ -1579,6 +1609,70 @@ function renderSudoku15(board, containerId, isSolution = false) {
     table.appendChild(tr);
   });
 }
+
+  function renderSudoku18(board, containerId, isSolution = false) {
+  const table = document.getElementById(containerId);
+  if (!table) return;
+
+  table.innerHTML = "";
+  table.style.width = "100%"; // Dodaj to, aby tabela wypełniała modal
+  table.style.borderCollapse = "collapse"; // Aby ramki się nie dublowały
+
+
+  // board to już tablica 18x18
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+
+      // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
+// Stylizacja komórki tabeli (td)
+      td.style.width = "10%";               // Szerokość komórki ustawiona na 10% szerokości rodzica
+      td.style.paddingTop = "10%";          // Wewnętrzny górny margines; trik pozwalający uzyskać proporcje kwadratu
+      td.style.position = "relative";       // Pozycjonowanie relatywne (punkt odniesienia dla elementów wewnątrz)
+      td.style.border = "1px solid #888";   // Ramka o grubości 1px, ciągła, w kolorze szarym
+      td.style.fontWeight = "bold";         // Pogrubienie czcionki
+      td.style.fontSize = "14px";           // Rozmiar czcionki ustawiony na 16 pikseli
+
+      // Stylizacja elementu wewnątrz komórki (span)
+      const span = document.createElement("span");
+      span.style.position = "absolute";     // Pozycjonowanie absolutne względem komórki td
+      span.style.top = "50%";               // Przesunięcie górnej krawędzi do połowy wysokości rodzica
+      span.style.left = "50%";              // Przesunięcie lewej krawędzi do połowy szerokości rodzica
+      span.style.transform = "translate(-50%, -50%)"; // Idealne wyśrodkowanie elementu (cofnięcie o połowę jego własnych wymiarów)
+
+      if (cell !== 0) {
+        span.innerText = cell;
+
+        // zielone jak wyżej
+        if (isSolution) {
+          span.style.color = "#4CAF50";
+        }
+      }
+
+      td.appendChild(span);
+
+      // ===========================
+      // pogrubione granice bloków 2x7
+      // ===========================
+
+      // pionowe podziałki co 6 kolumn
+      if ((colIndex + 1) % 6 === 0 && colIndex < 13) {
+        td.style.borderRight = "3px solid #000";
+      }
+
+      // poziome podziałki co 3 wiersze
+      if ((rowIndex + 1) % 3 === 0 && rowIndex < 16) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 4; col++) {
@@ -1710,6 +1804,30 @@ for (let r = 0; r < 3; r++) { // Blok ma 3 wiersze
 
     return true;
 }
+ function isValid18(board, row, col, num) {
+
+    // wiersz
+    for (let x = 0; x < 18; x++) {
+        if (board[row][x] === num) return false;
+    }
+
+    // kolumna
+    for (let y = 0; y < 18; y++) {
+        if (board[y][col] === num) return false;
+    }
+
+    // blok 3x6 lub 6x3? — wybieramy 3x6
+    const boxRow = Math.floor(row / 3) * 3;
+    const boxCol = Math.floor(col / 6) * 6;
+
+for (let r = 0; r < 3; r++) { // Blok ma 3 wiersze
+        for (let c = 0; c < 6; c++) { // Blok ma 6 kolumn
+            if (board[boxRow + r][boxCol + c] === num) return false;
+        }
+    }
+
+    return true;
+}
 
 function solveSudoku10(board) {
 
@@ -1800,6 +1918,31 @@ function solveSudoku14(board) {
                         board[row][col] = num;
 
                         if (solveSudoku15(board)) return true;
+
+                        board[row][col] = 0;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+  function solveSudoku18(board) {
+
+    for (let row = 0; row < 18; row++) {
+        for (let col = 0; col < 18; col++) {
+
+            if (board[row][col] === 0) {
+
+                for (let num = 1; num <= 18; num++) {
+
+                    if (isValid18(board, row, col, num)) {
+                        board[row][col] = num;
+
+                        if (solveSudoku18(board)) return true;
 
                         board[row][col] = 0;
                     }
@@ -1935,6 +2078,29 @@ function parseBoard15FromKeloPlusCode(code) {
     const board = [];
     for (let i = 0; i < 225; i += 15) {
         board.push(arr.slice(i, i + 15));
+    }
+
+    return board;
+}
+  function parseBoard18FromKeloPlusCode(code) {
+
+    const cleaned = code.trim();
+
+    if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+        throw new Error("Nieprawidłowy format KeloPlusCode 18x18.");
+    }
+
+    const inner = cleaned.slice(1, -1);
+
+    const arr = inner.split(",").map(x => Number(x.trim()));
+
+    if (arr.length !== 324) {
+        throw new Error("Kod nie zawiera 324 elementów.");
+    }
+
+    const board = [];
+    for (let i = 0; i < 324; i += 18) {
+        board.push(arr.slice(i, i + 18));
     }
 
     return board;
@@ -2149,6 +2315,32 @@ function showSudoku10() {
         }
 
         renderSudoku15(board, "solution-sudoku-table-15x15", true);
+
+    } catch (e) {
+        alert("Błąd: " + e.message);
+    }
+}
+
+  let currentBoard18x18 = null;
+   function showSudoku18() {
+
+    const input = document.getElementById("kelo-code-18x18").value.trim();
+
+    try {
+        const board = parseBoard18FromKeloPlusCode(input);
+
+        currentBoard18x18 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
+
+        renderSudoku18(board, "initial-sudoku-table-18x18");
+
+        const solved = solveSudoku18(board);
+
+        if (!solved) {
+            alert("Nie znaleziono rozwiązania sudoku 18x18.");
+            return;
+        }
+
+        renderSudoku18(board, "solution-sudoku-table-18x18", true);
 
     } catch (e) {
         alert("Błąd: " + e.message);
