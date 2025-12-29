@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
  <link rel="icon" type="image/png" href="favicon.png">
+<meta charset="UTF-8">
 <title>Sudoku 18×18 – tryb rozwiązywania, wersja beta</title>
 
 <style>
 
 :root{
-  --bg:#f0f2f5;
+  --bg:#eef1f7;
   --fg:#222;
   --board-bg:white;
   --good:#c8facc;
@@ -25,6 +25,13 @@ body{
   font-family:Arial, sans-serif;
   height:100vh;
   display:flex;
+}
+
+/* animowane tło */
+#bgAnim{
+  position:fixed;
+  inset:0;
+  z-index:-1;
 }
 
 #layout{
@@ -63,21 +70,19 @@ button{
 
 #boardCol{
   position:relative;
-  overflow:auto;   /* suwaki poprawione */
+  overflow:auto;
   display:flex;
   justify-content:center;
-  align-items:center;
+  align-items:flex-start;
 }
 
-/* plansza wrap do zoomu */
-
+/* powiększana plansza */
 #boardWrap{
   transform-origin: top left;
   transition: transform .15s ease;
 }
 
-/* overlay paywall */
-
+/* blur + mleczna plansza */
 #boardOverlay{
   position:absolute;
   top:0;
@@ -98,7 +103,7 @@ button{
   display:none;
 }
 
-/* tabela */
+/* sudoku */
 
 table{
   border-collapse:collapse;
@@ -151,26 +156,23 @@ input.bad{background:var(--bad);}
 
 /* ===== modal ===== */
 
-#modalOverlay{
+#modalOverlay,
+#loadSaveModal{
   position:fixed;
-  top:0;left:0;right:0;bottom:0;
+  inset:0;
   background:rgba(0,0,0,.55);
   display:none;
   justify-content:center;
   align-items:center;
-  z-index:20;
+  z-index:30;
 }
 
-#modal{
+.modalBox{
   background:white;
   border-radius:12px;
   padding:18px 22px;
   max-width:420px;
   text-align:center;
-}
-
-#modal h3{
-  margin-top:0;
 }
 
 /* ===== responsive ===== */
@@ -189,6 +191,8 @@ input.bad{background:var(--bad);}
 </head>
 
 <body>
+
+<canvas id="bgAnim"></canvas>
 
 <div id="layout">
 
@@ -209,11 +213,13 @@ input.bad{background:var(--bad);}
 
     <div class="tool-group">
       <button id="hint">Podpowiedź</button>
+      <button id="hint10">Podpowiedz 10</button>
     </div>
 
     <div class="tool-group">
       <button id="zoomIn">Powiększ</button>
       <button id="zoomOut">Pomniejsz</button>
+      <button id="zoomReset">Reset powiększenia</button>
     </div>
 
     <div class="tool-group">
@@ -240,38 +246,88 @@ input.bad{background:var(--bad);}
 
 </div>
 
+<!-- toast -->
 <div id="toasts"></div>
 
+<!-- gratulacje modal -->
 <div id="modalOverlay">
-  <div id="modal">
+  <div class="modalBox">
     <h3 id="modalTitle"></h3>
     <p id="modalText"></p>
     <button onclick="closeModal()">OK</button>
   </div>
 </div>
 
+<!-- load save modal -->
+<div id="loadSaveModal">
+  <div class="modalBox">
+    <h3>Znaleziono zapisany stan gry</h3>
+    <p id="loadSaveText"></p>
+    <button id="btnLoadSave">Załaduj</button>
+    <button onclick="closeLoadSave()">Anuluj</button>
+  </div>
+</div>
+
 <script>
-/* ===== utils ===== */
+
+/* ========= UTILS ========= */
 
 function toast(text){
   const t=document.createElement("div");
   t.className="toast";
   t.textContent=text;
   document.getElementById("toasts").appendChild(t);
-  setTimeout(()=>t.remove(),2500);
+  setTimeout(()=>t.remove(),2600);
+}
+
+function randomToast(arr){
+  toast(arr[Math.floor(Math.random()*arr.length)]);
 }
 
 function openModal(title,text){
-  document.getElementById("modalTitle").textContent=title;
-  document.getElementById("modalText").textContent=text;
-  document.getElementById("modalOverlay").style.display="flex";
+  modalTitle.textContent=title;
+  modalText.textContent=text;
+  modalOverlay.style.display="flex";
 }
 
 function closeModal(){
-  document.getElementById("modalOverlay").style.display="none";
+  modalOverlay.style.display="none";
 }
 
-/* ===== input ===== */
+/* ========= ANIMOWANE TŁO ========= */
+
+const cvs=document.getElementById("bgAnim");
+const ctx=cvs.getContext("2d");
+
+function resizeCanvas(){
+  cvs.width=innerWidth;
+  cvs.height=innerHeight;
+}
+resizeCanvas();
+addEventListener("resize",resizeCanvas);
+
+const bubbles=[...Array(25)].map(()=>({
+  x:Math.random()*innerWidth,
+  y:Math.random()*innerHeight,
+  r:20+Math.random()*40,
+  s:0.3+Math.random()*0.6
+}));
+
+function drawBg(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  bubbles.forEach(b=>{
+    ctx.fillStyle="rgba(120,170,255,.15)";
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+    b.y-=b.s;
+    if(b.y<-50) b.y=innerHeight+50;
+  });
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+/* ========= INPUT DATA ========= */
 
 function get(name){
   return new URLSearchParams(location.search).get(name);
@@ -280,14 +336,44 @@ function get(name){
 const initialBoard = JSON.parse(get("board"));
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
 
-/* ===== localStorage save ===== */
+/* ========= SAVE CHECK ========= */
 
-document.getElementById("save").onclick=()=>{
-  localStorage.setItem("sudoku18_state",JSON.stringify(workBoard));
-  toast("Stan gry zapisany");
-};
+function showLoadSaveModal(dateString){
+  loadSaveText.textContent="Zapis wykonano: "+dateString;
+  loadSaveModal.style.display="flex";
+}
+function closeLoadSave(){
+  loadSaveModal.style.display="none";
+}
 
-/* ===== TIMER ===== */
+(function checkSavedGame(){
+  const raw=localStorage.getItem("sudoku18_state");
+  const date=localStorage.getItem("sudoku18_state_date");
+  if(!raw) return;
+
+  const d = date ? new Date(date).toLocaleString() : "nieznany czas";
+  showLoadSaveModal(d);
+
+  btnLoadSave.onclick=()=>{
+    const saved=JSON.parse(raw);
+    for(let r=0;r<18;r++)
+      for(let c=0;c<18;c++)
+        workBoard[r][c]=saved[r][c];
+
+    for(let r=0;r<18;r++)
+      for(let c=0;c<18;c++){
+        const inp=table.rows?.[r]?.cells?.[c]?.firstChild;
+        if(!inp) continue;
+        if(initialBoard[r][c]===0)
+          inp.value = workBoard[r][c]===0 ? "" : workBoard[r][c];
+      }
+
+    closeLoadSave();
+    toast("Stan gry załadowany");
+  };
+})();
+
+/* ========= TIMER ========= */
 
 let seconds=0,timerInt=null,started=false;
 
@@ -303,6 +389,20 @@ start.onclick=()=>{
     timerInt=setInterval(updateTimer,1000);
     started=true;
     boardOverlay.classList.add("hidden");
+
+    const now=new Date();
+    const h=now.getHours()+now.getMinutes()/60;
+
+    if(h>=5.5 && h<10)
+      randomToast(["Poranna rozgrzewka","Czas rozgrzać mózg!"]);
+    else if(h>=10 && h<14)
+      randomToast(["Rozwiąż sudoku przed obiadem!"]);
+    else if(h>=14 && h<18)
+      randomToast(["Odpocznij z sudoku!"]);
+    else if(h>=18 && h<22)
+      randomToast(["Sudoku wieczorem - odprężenie przed snem","Odpocznij z sudoku"]);
+    else
+      randomToast(["Noc z sudoku - doskonałe połączenie"]);
   }
 };
 
@@ -311,9 +411,10 @@ stop.onclick=()=>{
   timerInt=null;
   boardOverlay.textContent="Czas zatrzymany";
   boardOverlay.classList.remove("hidden");
+  randomToast(["Wróć szybko!","Czekamy!","Do zobaczenia!"]);
 };
 
-/* ===== AUDIO ===== */
+/* ========= AUDIO ========= */
 
 let audioCtx;
 let soundEnabled=true;
@@ -341,7 +442,7 @@ function beep(freq){
   g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.2);
 }
 
-/* ===== LOGIKA ===== */
+/* ========= LOGIKA ========= */
 
 function isValid(board,r,c,val){
   for(let i=0;i<18;i++)
@@ -363,7 +464,7 @@ function isValid(board,r,c,val){
   return true;
 }
 
-/* ===== RENDER BOARD ===== */
+/* ========= RYSOWANIE PLANSZY ========= */
 
 const table=document.getElementById("board");
 
@@ -392,7 +493,7 @@ for(let r=0;r<18;r++){
   table.appendChild(tr);
 }
 
-/* ===== TRYBY ===== */
+/* ========= TRYBY ========= */
 
 let mode="later";
 
@@ -406,7 +507,27 @@ modeLater.onclick=()=>{
   toast("Tryb: najpierw rozwiąż");
 };
 
-/* ===== INPUT HANDLER ===== */
+/* ========= PODPOWIEDZI ========= */
+
+const hintedCells = new Set();
+
+function refreshHints(){
+  hintedCells.forEach(key=>{
+    const [r,c]=key.split(",").map(Number);
+
+    for(let v=1;v<=18;v++){
+      if(isValid(workBoard,r,c,v)){
+        workBoard[r][c]=v;
+        const inp=table.rows[r].cells[c].firstChild;
+        inp.value=v;
+        inp.classList.add("ok");
+        break;
+      }
+    }
+  });
+}
+
+/* ========= INPUT ========= */
 
 function onInput(r,c,input){
 
@@ -432,24 +553,26 @@ function onInput(r,c,input){
       input.classList.add("ok");
       input.classList.remove("bad");
       beep(900);
+      randomToast(["Super!","Gratulacje!","Doskonale!","Rewelacja!","Wspaniale","Bezbłędnie!","Mistrzowsko!","Wybitnie"]);
     } else {
       input.classList.add("bad");
       input.classList.remove("ok");
       beep(200);
+      randomToast(["Nie poddawaj się!","Nic się nie stało!","Następnym razem Ci się uda!"]);
     }
   }
 
+  refreshHints();
   checkFinished();
 }
 
-/* ===== ZOOM ===== */
+/* ========= ZOOM ========= */
 
 let zoom=1;
 
 zoomIn.onclick=()=>{
   zoom*=1.25;
   boardWrap.style.transform=`scale(${zoom})`;
-  boardCol.scrollTop=0; /* pozwala wrócić do góry */
 };
 
 zoomOut.onclick=()=>{
@@ -457,7 +580,14 @@ zoomOut.onclick=()=>{
   boardWrap.style.transform=`scale(${zoom})`;
 };
 
-/* ===== PODPOWIEDŹ – NAPRAWIONA ===== */
+zoomReset.onclick=()=>{
+  zoom=1;
+  boardWrap.style.transform="scale(1)";
+  boardCol.scrollTop=0;
+  boardCol.scrollLeft=0;
+};
+
+/* ========= PODPOWIEDŹ 1 ========= */
 
 hint.onclick=()=>{
 
@@ -481,15 +611,70 @@ hint.onclick=()=>{
       const inp=table.rows[r].cells[c].firstChild;
       inp.value=v;
       inp.classList.add("ok");
+      hintedCells.add(`${r},${c}`);
       beep(1000);
       break;
     }
   }
 
+  refreshHints();
   checkFinished();
 };
 
-/* ===== SPRAWDZENIE KOŃCA GRY ===== */
+/* ========= PODPOWIEDŹ 10 ========= */
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+}
+
+hint10.onclick=()=>{
+
+  const free=[];
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++)
+      if(workBoard[r][c]===0)
+        free.push([r,c]);
+
+  if(free.length<10){
+    hint10.style.display="none";
+    return;
+  }
+
+  shuffle(free);
+
+  let added=0;
+  for(const [r,c] of free){
+    for(let v=1;v<=18;v++){
+      if(isValid(workBoard,r,c,v)){
+        workBoard[r][c]=v;
+        const inp=table.rows[r].cells[c].firstChild;
+        inp.value=v;
+        inp.classList.add("ok");
+        hintedCells.add(`${r},${c}`);
+        added++;
+        break;
+      }
+    }
+    if(added>=10) break;
+  }
+
+  toast("Dodano 10 podpowiedzi");
+  refreshHints();
+  checkFinished();
+};
+
+/* ========= SAVE ========= */
+
+save.onclick=()=>{
+  localStorage.setItem("sudoku18_state",JSON.stringify(workBoard));
+  localStorage.setItem("sudoku18_state_date", new Date().toISOString());
+  randomToast(["Dobry pomysł!","Do zobaczenia!"]);
+};
+
+/* ========= SPRAWDZENIE KOŃCA ========= */
 
 function checkFinished(){
 
@@ -501,9 +686,10 @@ function checkFinished(){
     }
 
   beep(1300);
+  randomToast(["Jesteś mistrzem!","Super!","Gratulacje!"]);
 
   openModal(
-    "Gratulacje!",
+    "Gratulacje ",
     "Rozwiązałeś poprawnie sudoku 18×18!"
   );
 }
