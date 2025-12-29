@@ -205,7 +205,22 @@
   box-shadow: 0 3px 6px rgba(0,0,0,.2);
   transform: translateY(-1px);
 }
+    .open-new-tab-btn-2 {
+  margin-top: 10px;
+  padding: 10px 18px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
 
+.open-new-tab-btn-2:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,.2);
+  transform: translateY(-1px);
+}
 
   </style>
 </head>
@@ -1743,7 +1758,7 @@ function isDesktop() {
 
   const btn = document.createElement("button");
   btn.id = "solve18btn";
-  btn.className = "open-new-tab-btn";
+  btn.className = "open-new-tab-btn-2";
   btn.textContent = "Rozwiąż w nowej karcie, wersja beta";
 
   btn.onclick = () => {
