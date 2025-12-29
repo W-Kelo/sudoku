@@ -1628,12 +1628,12 @@ function renderSudoku15(board, containerId, isSolution = false) {
 
       // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
 // Stylizacja komórki tabeli (td)
-      td.style.width = "10%";               // Szerokość komórki ustawiona na 10% szerokości rodzica
-      td.style.paddingTop = "10%";          // Wewnętrzny górny margines; trik pozwalający uzyskać proporcje kwadratu
+      td.style.width = "5.5%";               // Szerokość komórki ustawiona na 10% szerokości rodzica
+      td.style.paddingTop = "5.5%";          // Wewnętrzny górny margines; trik pozwalający uzyskać proporcje kwadratu
       td.style.position = "relative";       // Pozycjonowanie relatywne (punkt odniesienia dla elementów wewnątrz)
       td.style.border = "1px solid #888";   // Ramka o grubości 1px, ciągła, w kolorze szarym
       td.style.fontWeight = "bold";         // Pogrubienie czcionki
-      td.style.fontSize = "14px";           // Rozmiar czcionki ustawiony na 16 pikseli
+      td.style.fontSize = "13px";           // Rozmiar czcionki ustawiony na 16 pikseli
 
       // Stylizacja elementu wewnątrz komórki (span)
       const span = document.createElement("span");
@@ -1652,10 +1652,6 @@ function renderSudoku15(board, containerId, isSolution = false) {
       }
 
       td.appendChild(span);
-
-      // ===========================
-      // pogrubione granice bloków 2x7
-      // ===========================
 
       // pionowe podziałki co 6 kolumn
       if ((colIndex + 1) % 6 === 0 && colIndex < 13) {
