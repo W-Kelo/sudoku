@@ -1694,6 +1694,8 @@ function isDesktop() {
     table.appendChild(tr);
   });
   maybeAddOpenButtonFor18();
+  if (!isSolution) addSolveButton18(board);
+
 }
   function maybeAddOpenButtonFor18() {
 
@@ -1729,6 +1731,33 @@ function isDesktop() {
     tbl.insertAdjacentElement("afterend", btn);
   });
 }
+  function addSolveButton18(board) {
+
+  if (!isDesktop()) return;
+
+  const container = document.getElementById("sudoku-container");
+  if (!container) return;
+
+  const old = document.getElementById("solve18btn");
+  if (old) old.remove();
+
+  const btn = document.createElement("button");
+  btn.id = "solve18btn";
+  btn.className = "open-new-tab-btn";
+  btn.textContent = "Rozwiąż w nowej karcie, wersja beta";
+
+  btn.onclick = () => {
+    const url =
+      "sudoku18solve.html?board=" + encodeURIComponent(JSON.stringify(board));
+    window.open(url, "_blank");
+  };
+
+  // tylko pod NIERozwiązaną
+  document
+    .getElementById("initial-sudoku-table")
+    .insertAdjacentElement("afterend", btn);
+}
+
 
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
