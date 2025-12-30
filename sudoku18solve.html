@@ -332,8 +332,7 @@ try{
 }
 
 
-const raw = get("board");
-const decoded = decodeURIComponent(raw);
+
 const initialBoard = JSON.parse(decoded);
 
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
