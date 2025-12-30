@@ -314,63 +314,60 @@ const bubbles=[...Array(26)].map(()=>({
 })();
 
 /* ------------------ URL BOARD INPUT ------------------ */
+
 function get(name){
   return new URLSearchParams(location.search).get(name);
 }
 
 const raw = get("board");
+
 let initialBoard;
 
-try {
-  if (raw) {
-    initialBoard = JSON.parse(decodeURIComponent(raw));
-  } else {
-    initialBoard = Array.from({length:18}, () => Array(18).fill(0));
-  }
-} catch(e) {
-  initialBoard = Array.from({length:18}, () => Array(18).fill(0));
+try{
+  const decoded = decodeURIComponent(raw);
+  initialBoard = JSON.parse(decoded);
+}catch(e){
+  // awaryjnie pusty board jeśli URL uszkodzony
+  initialBoard = Array.from({length:18}, ()=> Array(18).fill(0));
 }
+
+
+const raw = get("board");
+const decoded = decodeURIComponent(raw);
 
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
 
-/* ------------------ TABLE GENERATION (PRZENIESIONE TUTAJ) ------------------ */
-const table = document.getElementById("board");
-
-for(let r=0;r<18;r++){
-  const tr = document.createElement("tr");
-  for(let c=0;c<18;c++){
-    const td = document.createElement("td");
-    if((c+1)%6===0 && c<17) td.classList.add("bold-r");
-    if((r+1)%3===0 && r<17) td.classList.add("bold-b");
-
-    const input = document.createElement("input");
-    if(initialBoard[r][c] !== 0){
-      input.value = initialBoard[r][c];
-      input.disabled = true;
-      input.dataset.given = "1";
-    } else {
-      input.value = "";
-      input.disabled = true;
-      input.dataset.given = "0";
-      input.addEventListener("input", () => onInput(r, c, input));
-    }
-    td.appendChild(input);
-    tr.appendChild(td);
-  }
-  table.appendChild(tr);
-}
-
 /* ------------------ SAVE SYSTEM ------------------ */
-// Teraz, gdy tabela istnieje, system zapisu nie zablokuje reszty kodu
-const loadSaveModal = document.getElementById("loadSaveModal");
-const btnLoadSave = document.getElementById("btnLoadSave");
-const loadSaveText = document.getElementById("loadSaveText");
 
 function showLoadSaveModal(dateString){
-  loadSaveText.textContent = "Zapis wykonano: " + dateString;
-  loadSaveModal.style.display = "flex";
+  loadSaveText.textContent="Zapis wykonano: "+dateString;
+  loadSaveModal.style.display="flex";
 }
-  
+function closeLoadSave(){
+  loadSaveModal.style.display="none";
+}
+
+(function checkSavedGame(){
+  const raw=localStorage.getItem("sudoku18_state");
+  const date=localStorage.getItem("sudoku18_state_date");
+  if(!raw) return;
+
+  const d = date ? new Date(date).toLocaleString() : "nieznany czas";
+  showLoadSaveModal(d);
+
+  btnLoadSave.onclick=()=>{
+    const saved=JSON.parse(raw);
+
+    for(let r=0;r<18;r++)
+      for(let c=0;c<18;c++)
+        workBoard[r][c]=saved[r][c];
+
+    redrawInputs();
+    closeLoadSave();
+    toast("Stan gry załadowany");
+  };
+})();
+
 /* ------------------ TIMER ------------------ */
 
 let seconds=0,timerInt=null,started=false;
@@ -466,6 +463,55 @@ function isValid(board,r,c,val){
     }
 
   return true;
+}
+
+/* ------------------ TABLE DRAW ------------------ */
+
+const table=document.getElementById("board");
+
+function redrawInputs(){
+
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++){
+      const inp=table.rows[r].cells[c].firstChild;
+
+      if(initialBoard[r][c]!==0){
+        inp.value=initialBoard[r][c];
+        inp.disabled=true;
+        inp.dataset.given="1";
+      } else {
+        inp.value = workBoard[r][c]===0 ? "" : workBoard[r][c];
+        inp.dataset.given="0";
+      }
+    }
+}
+
+for(let r=0;r<18;r++){
+  const tr=document.createElement("tr");
+
+  for(let c=0;c<18;c++){
+
+    const td=document.createElement("td");
+    if((c+1)%6===0 && c<17) td.classList.add("bold-r");
+    if((r+1)%3===0 && r<17) td.classList.add("bold-b");
+
+    const input=document.createElement("input");
+
+    if(initialBoard[r][c]!==0){
+      input.value=initialBoard[r][c];
+      input.disabled=true;
+      input.dataset.given="1";
+    }else{
+      input.value="";
+      input.disabled=true;
+      input.dataset.given="0";
+      input.addEventListener("input",()=>onInput(r,c,input));
+    }
+
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
 }
 
 /* ------------------ MODES ------------------ */
