@@ -202,9 +202,9 @@ input.bad{background:var(--bad);}
     <h2>Narzędzia</h2>
 
     <div class="tool-group">
-      <button id="start">Start czasu</button>
-      <button id="stop">Stop czasu</button>
-      <div id="timer">00:00</div>
+      <button id="start">Rozpocznij</button>
+      <!--<button id="stop">Stop czasu</button>
+      <div id="timer">00:00</div>-->
     </div>
 
     <div class="tool-group">
@@ -216,6 +216,7 @@ input.bad{background:var(--bad);}
       <button id="hint">Podpowiedź</button>
       <button id="hint10">Podpowiedz 10</button>
       <button id="removeConflictsBtn">Usuń konflikty</button>
+      <button id="resetColorsBtn">Zresetuj kolory komórek</button>
     </div>
 
     <div class="tool-group">
@@ -236,7 +237,7 @@ input.bad{background:var(--bad);}
 
   <div id="boardCol">
 
-      <div id="boardOverlay">Rozpocznij czas aby grać</div>
+      <div id="boardOverlay">Naciśnij „Rozpocznij”, aby uruchomić grę.</div>
 
     <div id="boardWrap">
       <table id="board"></table>
@@ -559,30 +560,15 @@ function removeConflicts(){
       const v = workBoard[r][c];
       if(v===0) continue;
 
-      if(isValid(workBoard,r,c,v)) continue;
-
-      let fixed = false;
-
-      for(let nv=1;nv<=18;nv++){
-        if(isValid(workBoard,r,c,nv)){
-          workBoard[r][c]=nv;
-          const inp=table.rows[r].cells[c].firstChild;
-          inp.value=nv;
-          inp.classList.add("ok");
-          inp.classList.remove("bad");
-          fixed=true;
-          break;
-        }
-      }
-
-      if(!fixed){
+      if(!isValid(workBoard,r,c,v)){
         workBoard[r][c]=0;
-        const inp=table.rows[r].cells[c].firstChild;
+        const inp = table.rows[r].cells[c].firstChild;
         inp.value="";
         inp.classList.remove("ok","bad");
       }
     }
 }
+
 
 
 removeConflictsBtn.textContent="Usuń konflikty";
@@ -591,6 +577,17 @@ removeConflictsBtn.onclick=()=>{
   removeConflicts();
   toast("Konflikty usunięte");
 };
+resetColorsBtn.onclick = () => {
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++){
+      const inp = table.rows[r].cells[c].firstChild;
+      inp.classList.remove("ok","bad");
+    }
+
+  toast("Kolory zresetowane");
+};
+
+
 
 
 function onInput(r,c,input){
