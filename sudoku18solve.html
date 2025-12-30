@@ -315,25 +315,26 @@ const bubbles=[...Array(26)].map(()=>({
 
 /* ------------------ URL BOARD INPUT ------------------ */
 
+/* ------------------ URL BOARD INPUT ------------------ */
+
 function get(name){
   return new URLSearchParams(location.search).get(name);
 }
 
 const raw = get("board");
-
 let initialBoard;
 
-try{
-  const decoded = decodeURIComponent(raw);
-  initialBoard = JSON.parse(decoded);
-}catch(e){
-  // awaryjnie pusty board jeśli URL uszkodzony
-  initialBoard = Array.from({length:18}, ()=> Array(18).fill(0));
+try {
+  if (raw) {
+    const decoded = decodeURIComponent(raw);
+    initialBoard = JSON.parse(decoded);
+  } else {
+    throw new Error("No board data");
+  }
+} catch(e) {
+  // awaryjnie pusty board jeśli URL uszkodzony lub brak danych
+  initialBoard = Array.from({length:18}, () => Array(18).fill(0));
 }
-
-
-
-const initialBoard = JSON.parse(decoded);
 
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
 
