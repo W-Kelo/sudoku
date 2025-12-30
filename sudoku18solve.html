@@ -319,7 +319,23 @@ function get(name){
   return new URLSearchParams(location.search).get(name);
 }
 
-const initialBoard = JSON.parse(get("board"));
+const raw = get("board");
+
+let initialBoard;
+
+try{
+  const decoded = decodeURIComponent(raw);
+  initialBoard = JSON.parse(decoded);
+}catch(e){
+  // awaryjnie pusty board jeśli URL uszkodzony
+  initialBoard = Array.from({length:18}, ()=> Array(18).fill(0));
+}
+
+
+const raw = get("board");
+const decoded = decodeURIComponent(raw);
+const initialBoard = JSON.parse(decoded);
+
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
 
 /* ------------------ SAVE SYSTEM ------------------ */
