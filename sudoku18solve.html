@@ -75,6 +75,7 @@ button:disabled{
 }
 
 #boardOverlay{
+  pointer-events:none;
   position:absolute;
   inset:0;
   backdrop-filter:blur(7px);
@@ -347,6 +348,8 @@ try{
 const decoded = decodeURIComponent(raw);
 
 const workBoard = JSON.parse(JSON.stringify(initialBoard));
+const BOARD_KEY = "sudoku18_state_" + location.search;
+
 
 /* ------------------ SAVE SYSTEM ------------------ */
 
@@ -359,8 +362,8 @@ function closeLoadSave(){
 }
 
 (function checkSavedGame(){
-  const raw=localStorage.getItem("sudoku18_state");
-  const date=localStorage.getItem("sudoku18_state_date");
+const raw = localStorage.getItem(BOARD_KEY);
+const date = localStorage.getItem(BOARD_KEY+"_date");
   if(!raw) return;
 
   const d = date ? new Date(date).toLocaleString() : "nieznany czas";
@@ -374,6 +377,7 @@ function closeLoadSave(){
         workBoard[r][c]=saved[r][c];
 
     redrawInputs();
+    validateAllUserCells();
     closeLoadSave();
     toast("Stan gry załadowany");
   };
@@ -531,11 +535,13 @@ let mode="later";
 
 modeInstant.onclick=()=>{
   mode="instant";
+  validateAllUserCells();
   toast("Tryb: sprawdzaj od razu");
 };
 
 modeLater.onclick=()=>{
   mode="later";
+  validateAllUserCells();
   toast("Tryb: najpierw rozwiąż");
 };
 
@@ -543,29 +549,49 @@ modeLater.onclick=()=>{
 
 const hintedCells = new Set();
 
-function refreshHints(){
+function removeConflicts(){
 
-  hintedCells.forEach(key=>{
-    const [r,c]=key.split(",").map(Number);
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++){
 
-    if(initialBoard[r][c]!==0) return;
+      if(initialBoard[r][c]!==0) continue;
 
-    for(let v=1;v<=18;v++){
-      if(isValid(workBoard,r,c,v)){
-        workBoard[r][c]=v;
+      const v = workBoard[r][c];
+      if(v===0) continue;
+
+      if(isValid(workBoard,r,c,v)) continue;
+
+      let fixed = false;
+
+      for(let nv=1;nv<=18;nv++){
+        if(isValid(workBoard,r,c,nv)){
+          workBoard[r][c]=nv;
+          const inp=table.rows[r].cells[c].firstChild;
+          inp.value=nv;
+          inp.classList.add("ok");
+          inp.classList.remove("bad");
+          fixed=true;
+          break;
+        }
+      }
+
+      if(!fixed){
+        workBoard[r][c]=0;
         const inp=table.rows[r].cells[c].firstChild;
-        inp.value=v;
-        inp.classList.add("ok");
-        break;
+        inp.value="";
+        inp.classList.remove("ok","bad");
       }
     }
-  });
 }
 
+
+refreshHintsBtn.textContent="Usuń konflikty";
+
 refreshHintsBtn.onclick=()=>{
-  refreshHints();
-  toast("Podpowiedzi zaktualizowane");
+  removeConflicts();
+  toast("Konflikty usunięte");
 };
+
 
 function onInput(r,c,input){
 
@@ -704,12 +730,33 @@ zoomReset.onclick=()=>{
 /* ------------------ SAVE ------------------ */
 
 save.onclick=()=>{
-  localStorage.setItem("sudoku18_state",JSON.stringify(workBoard));
-  localStorage.setItem("sudoku18_state_date", new Date().toISOString());
+  localStorage.setItem(BOARD_KEY, JSON.stringify(workBoard));
+  localStorage.setItem(BOARD_KEY+"_date", new Date().toISOString());
   randomToast(["Dobry pomysł!","Do zobaczenia!"]);
 };
 
+
 /* ------------------ FINISH CHECK ------------------ */
+  function validateAllUserCells(){
+  for(let r=0;r<18;r++)
+    for(let c=0;c<18;c++){
+      if(initialBoard[r][c]!==0) continue;
+
+      const v = workBoard[r][c];
+      const inp = table.rows[r].cells[c].firstChild;
+
+      inp.classList.remove("ok","bad");
+
+      if(v===0) continue;
+
+      if(isValid(workBoard,r,c,v)){
+        inp.classList.add("ok");
+      }else{
+        inp.classList.add("bad");
+      }
+    }
+}
+
 
 function checkFinished(){
 
