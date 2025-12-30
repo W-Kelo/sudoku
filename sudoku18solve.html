@@ -215,7 +215,7 @@ input.bad{background:var(--bad);}
     <div class="tool-group">
       <button id="hint">Podpowiedź</button>
       <button id="hint10">Podpowiedz 10</button>
-      <button id="refreshHintsBtn">Zaktualizuj podpowiedzi</button>
+      <button id="removeConflictsBtn">Usuń konflikty</button>
     </div>
 
     <div class="tool-group">
@@ -585,9 +585,9 @@ function removeConflicts(){
 }
 
 
-refreshHintsBtn.textContent="Usuń konflikty";
+removeConflictsBtn.textContent="Usuń konflikty";
 
-refreshHintsBtn.onclick=()=>{
+removeConflictsBtn.onclick=()=>{
   removeConflicts();
   toast("Konflikty usunięte");
 };
@@ -625,7 +625,7 @@ function onInput(r,c,input){
     }
   }
 
-  refreshHints();
+  removeConflicts()();
   checkFinished();
 }
 
@@ -663,7 +663,7 @@ hint.onclick=()=>{
     }
   }
 
-  refreshHints();
+  removeConflicts()();
   checkFinished();
 };
 
@@ -702,7 +702,7 @@ hint10.onclick=()=>{
   }
 
   toast("Dodano 10 podpowiedzi");
-  refreshHints();
+  removeConflicts()();
   checkFinished();
 };
 
