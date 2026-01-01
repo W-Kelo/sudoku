@@ -1137,10 +1137,8 @@ worker.onmessage = function (e) {
     return;
   }
 
-
-  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
   renderSudoku18(initialBoard, "initial-sudoku-table");
-  renderSudoku18(boardToSolve, "solution-sudoku-table", true);
+  renderSudoku18(result.board, "solution-sudoku-table", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
@@ -1150,7 +1148,13 @@ worker.onmessage = function (e) {
     (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
   activeSection = document.getElementById("sudoku-container");
-};
+};   // koniec onmessage
+
+}   
+
+/* --- SUDOKU 8x8 ---------------------------------------------------------- */
+else if (initialBoardString.length === 64) {
+
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
 else if (initialBoardString.length === 64) {
 
