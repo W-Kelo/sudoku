@@ -1117,12 +1117,26 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   // 2) kopiujemy do wyświetlenia
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  // 3) rozwiązanie
-  try { 
-    solveSudoku18(boardToSolve); 
-  } catch (e) { 
-    console.warn("solveSudoku18 error", e); 
+  // 3) rozwiązanie w Web Workerze (bez wieszania strony)
+
+const worker = new Worker("sudoku18worker.js");
+
+// pokaż informację, że liczy
+document.getElementById("solution-sudoku-table").innerHTML =
+  "<tr><td>Liczenie rozwiązania… proszę czekać ⏳</td></tr>";
+
+worker.postMessage(boardToSolve);
+
+worker.onmessage = function (e) {
+
+  const result = e.data;
+
+  if (!result.solved) {
+    document.getElementById("solution-sudoku-table").innerHTML =
+      "<tr><td>Brak rozwiązania ❌</td></tr>";
+    return;
   }
+
 
   // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
   renderSudoku18(initialBoard, "initial-sudoku-table");
@@ -2031,31 +2045,6 @@ function solveSudoku14(board) {
 
     return true;
 }
-  function solveSudoku18(board) {
-
-    for (let row = 0; row < 18; row++) {
-        for (let col = 0; col < 18; col++) {
-
-            if (board[row][col] === 0) {
-
-                for (let num = 1; num <= 18; num++) {
-
-                    if (isValid18(board, row, col, num)) {
-                        board[row][col] = num;
-
-                        if (solveSudoku18(board)) return true;
-
-                        board[row][col] = 0;
-                    }
-                }
-
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
 
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
@@ -2422,31 +2411,47 @@ function showSudoku10() {
     }
 }
 
-  let currentBoard18x18 = null;
-   function showSudoku18() {
+ let currentBoard18x18 = null;
 
-    const input = document.getElementById("kelo-code-18x18").value.trim();
+function showSudoku18() {
 
-    try {
-        const board = parseBoard18FromKeloPlusCode(input);
+  const input = document.getElementById("kelo-code-18x18").value.trim();
 
-        currentBoard18x18 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
+  try {
+    const board = parseBoard18FromKeloPlusCode(input);
 
-        renderSudoku18(board, "initial-sudoku-table-18x18");
+    // kopia do zapisu przez użytkownika
+    currentBoard18x18 = JSON.parse(JSON.stringify(board));
 
-        const solved = solveSudoku18(board);
+    // renderujemy planszę wejściową
+    renderSudoku18(board, "initial-sudoku-table-18x18");
 
-        if (!solved) {
-            alert("Nie znaleziono rozwiązania sudoku 18x18.");
-            return;
-        }
+    // pokazujemy komunikat w tabeli rozwiązania
+    const solTable = document.getElementById("solution-sudoku-table-18x18");
+    solTable.innerHTML = "<tr><td>Liczenie rozwiązania… ⏳</td></tr>";
 
-        renderSudoku18(board, "solution-sudoku-table-18x18", true);
+    // start workera
+    const worker = new Worker("sudoku18worker.js");
 
-    } catch (e) {
-        alert("Błąd: " + e.message);
-    }
+    worker.postMessage(board);
+
+    worker.onmessage = function (e) {
+      const { solved, board: solvedBoard } = e.data;
+
+      if (!solved) {
+        solTable.innerHTML = "<tr><td>Brak rozwiązania ❌</td></tr>";
+        return;
+      }
+
+      // render rozwiązania
+      renderSudoku18(solvedBoard, "solution-sudoku-table-18x18", true);
+    };
+
+  } catch (e) {
+    alert("Błąd: " + e.message);
+  }
 }
+
 
 // ========================= SUDOKU 8x8 ==============================
 
