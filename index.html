@@ -1715,8 +1715,16 @@ function isDesktop() {
 
     table.appendChild(tr);
   });
+   // po narysowaniu planszy
   maybeAddOpenButtonFor18();
-  if (!isSolution) addSolveButton18(board);
+
+  // przycisk „Rozwiąż w nowej karcie” tylko dla nierozwiązanej
+  if (!isSolution) {
+    addSolveButton18(board);
+  } else {
+    const old = document.getElementById("solve18btn");
+    if (old) old.remove();
+  }
 
 }
  function maybeAddOpenButtonFor18() {
