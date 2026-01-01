@@ -1,12 +1,21 @@
 // =========================
-// SZYBKI SOLVER 18x18 MRV
+// SZYBKI SOLVER 18x18 MRV – NAPRAWIONY
 // =========================
 
 // sprawdzanie poprawności
 function isValid18(board, row, col, num) {
-  for (let c = 0; c < 18; c++) if (board[row][c] === num) return false;
-  for (let r = 0; r < 18; r++) if (board[r][col] === num) return false;
 
+  // wiersz
+  for (let c = 0; c < 18; c++) {
+    if (board[row][c] === num) return false;
+  }
+
+  // kolumna
+  for (let r = 0; r < 18; r++) {
+    if (board[r][col] === num) return false;
+  }
+
+  // blok 3x6
   const startRow = Math.floor(row / 3) * 3;
   const startCol = Math.floor(col / 6) * 6;
 
@@ -15,71 +24,74 @@ function isValid18(board, row, col, num) {
       if (board[startRow + r][startCol + c] === num) return false;
     }
   }
+
   return true;
 }
 
-// zwraca listę dopuszczalnych liczb dla pola
+// lista kandydatów
 function getCandidates(board, row, col) {
-  const candidates = [];
+  const cand = [];
   for (let num = 1; num <= 18; num++) {
-    if (isValid18(board, row, col, num)) candidates.push(num);
+    if (isValid18(board, row, col, num)) cand.push(num);
   }
-  return candidates;
+  return cand;
 }
 
-// wybiera najlepsze pole (MRV)
+// wybór komórki MRV
 function selectBestCell(board) {
   let best = null;
   let bestCandidates = null;
 
   for (let r = 0; r < 18; r++) {
     for (let c = 0; c < 18; c++) {
-      if (board[r][c] === 0) {
 
-        const cand = getCandidates(board, r, c);
+      if (board[r][c] !== 0) continue;
 
-        if (cand.length === 0) return null;        // sprzeczność
-        if (cand.length === 1) return { r, c, cand };
+      const cand = getCandidates(board, r, c);
 
-        if (!best || cand.length < bestCandidates.length) {
-          best = { r, c, cand };
-          bestCandidates = cand;
+      // brak kandydatów => SPRZECZNOŚĆ
+      if (cand.length === 0) return { status: "FAIL" };
 
-          if (cand.length === 2) return best;      // MRV – bardzo dobre
-        }
+      if (!best || cand.length < bestCandidates.length) {
+        best = { r, c, cand };
+        bestCandidates = cand;
+
+        if (cand.length === 1) return { status: "OK", ...best };
       }
     }
   }
 
-  return best; // może być null = brak pustych pól
+  // brak pustych pól => ROZWIĄZANE
+  if (!best) return { status: "SOLVED" };
+
+  return { status: "OK", ...best };
 }
 
-// szybki backtracking z MRV
+// solver
 function solveSudoku18(board) {
 
-  const cell = selectBestCell(board);
-  if (!cell) return true; // brak pustych = sukces
+  const choice = selectBestCell(board);
 
-  const { r, c, cand } = cell;
+  if (choice.status === "SOLVED") return true;
+  if (choice.status === "FAIL") return false;
 
-  // heurystyczne sortowanie kandydatów
-  cand.sort((a, b) => Math.random() - 0.5);
+  const { r, c, cand } = choice;
+
+  // losowa kolejność kandydatów dla rozproszenia drzewa
+  cand.sort(() => Math.random() - 0.5);
 
   for (const num of cand) {
+    board[r][c] = num;
 
-    if (isValid18(board, r, c, num)) {
-      board[r][c] = num;
+    if (solveSudoku18(board)) return true;
 
-      if (solveSudoku18(board)) return true;
-
-      board[r][c] = 0;
-    }
+    board[r][c] = 0;
   }
 
   return false;
 }
 
-// odbiór z głównej strony
+// odbiór z głównego wątku
 self.onmessage = function (e) {
 
   const boardCopy = JSON.parse(JSON.stringify(e.data));
