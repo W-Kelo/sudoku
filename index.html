@@ -322,7 +322,7 @@
   <p class="rating-message error-message"></p>
 </div>
     </div>
-
+<!-- To jest kod starego sposobu prezentacji rozwiązań sudoku 16x16.
         <div id="sudoku16-info" style="display: none;">
       <h2>Sudoku 16*16</h2>
       <p>Wprowadzony kod dotyczy sudoku 16*16 z zeszytu <span id="sudoku16-origin"></span>.</p>
@@ -348,6 +348,7 @@
   <p class="rating-message error-message"></p>
 </div>
  </div>
+    -->
 
             <div id="sudoku10-info" style="display: none;">
       <h2>Sudoku 10x10</h2>
@@ -707,7 +708,7 @@ function callApi(params) {
   document.getElementById("sudoku-container").style.display = "none";
   document.getElementById("word-search-info").style.display = "none";
   document.getElementById("cypher-puzzle-info").style.display = "none";
-  document.getElementById("sudoku16-info").style.display = "none";
+//  document.getElementById("sudoku16-info").style.display = "none";
   document.getElementById("sudoku10-info").style.display = "none";
   document.getElementById("sudokusm89-info").style.display = "none";
   document.getElementById("konkurs-info").style.display = "none";
@@ -804,7 +805,7 @@ function onSuccess(data) {
 
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku16-info","sudoku10-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku10-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -893,10 +894,10 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudokusm89-info");
       showOnlySection(activeSection);
       setCommon("sudokusm89-origin", "sudokusm89-link", data.origin, data.notes);
-    } else if (typeRaw === "sudoku16" || typeRaw === "16" || typeRaw === "16x16") {
-      activeSection = document.getElementById("sudoku16-info");
-      showOnlySection(activeSection);
-      setCommon("sudoku16-origin", "sudoku16-link", data.origin, data.notes);
+   // } else if (typeRaw === "sudoku16" || typeRaw === "16" || typeRaw === "16x16") {
+    //  activeSection = document.getElementById("sudoku16-info");
+    //  showOnlySection(activeSection);
+    //  setCommon("sudoku16-origin", "sudoku16-link", data.origin, data.notes);
     } else if (typeRaw === "sudoku10" || typeRaw === "10" || typeRaw === "10x10") {
       activeSection = document.getElementById("sudoku10-info");
       showOnlySection(activeSection);
@@ -1097,6 +1098,36 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
   renderSudoku15(initialBoard, "initial-sudoku-table");
   renderSudoku15(boardToSolve, "solution-sudoku-table", true);
+
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
+
+  activeSection = document.getElementById("sudoku-container");
+}
+   /* --- SUDOKU 16x16 - nowa wersja ---------------------------------------------------------- */
+else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 256) {
+    // Kod wykona się tylko, gdy oba warunki są spełnione
+
+  // 1) zamiana KeloPlusCode -> tablica 16x16
+  const boardToSolve = parseBoard16FromKeloPlusCode(initialBoardString);
+
+  // 2) kopiujemy do wyświetlenia
+  const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
+
+  // 3) rozwiązanie
+  try { 
+    solveSudoku16(boardToSolve); 
+  } catch (e) { 
+    console.warn("solveSudoku16 error", e); 
+  }
+
+  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  renderSudoku16(initialBoard, "initial-sudoku-table");
+  renderSudoku16(boardToSolve, "solution-sudoku-table", true);
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
@@ -1648,6 +1679,66 @@ function renderSudoku15(board, containerId, isSolution = false) {
     table.appendChild(tr);
   });
 }
+  function renderSudoku16(board, containerId, isSolution = false) {
+  clear18Artifacts();
+  const table = document.getElementById(containerId);
+  if (!table) return;
+
+  table.innerHTML = "";
+  table.style.width = "100%"; // Dodaj to, aby tabela wypełniała modal
+  table.style.borderCollapse = "collapse"; // Aby ramki się nie dublowały
+
+
+  // board to już tablica 16x16
+  board.forEach((row, rowIndex) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell, colIndex) => {
+      const td = document.createElement("td");
+
+      // --- TE SAME UPIĘKSZENIA JAK 4x4 i 6x6 ---
+// Stylizacja komórki tabeli (td)
+      td.style.width = "6.25%";               // Szerokość komórki ustawiona na 6.6% szerokości rodzica
+      td.style.paddingTop = "6.25%";          // Wewnętrzny górny margines; trik pozwalający uzyskać proporcje kwadratu
+      td.style.position = "relative";       // Pozycjonowanie relatywne (punkt odniesienia dla elementów wewnątrz)
+      td.style.border = "1px solid #888";   // Ramka o grubości 1px, ciągła, w kolorze szarym
+      td.style.fontWeight = "bold";         // Pogrubienie czcionki
+      td.style.fontSize = "14px";           // Rozmiar czcionki ustawiony na 16 pikseli
+
+      // Stylizacja elementu wewnątrz komórki (span)
+      const span = document.createElement("span");
+      span.style.position = "absolute";     // Pozycjonowanie absolutne względem komórki td
+      span.style.top = "50%";               // Przesunięcie górnej krawędzi do połowy wysokości rodzica
+      span.style.left = "50%";              // Przesunięcie lewej krawędzi do połowy szerokości rodzica
+      span.style.transform = "translate(-50%, -50%)"; // Idealne wyśrodkowanie elementu (cofnięcie o połowę jego własnych wymiarów)
+
+      if (cell !== 0) {
+        span.innerText = cell;
+
+        // zielone jak wyżej
+        if (isSolution) {
+          span.style.color = "#4CAF50";
+        }
+      }
+
+      td.appendChild(span);
+
+      // pionowe podziałki co 4 kolumny
+      if ((colIndex + 1) % 4 === 0 && colIndex < 13) {
+        td.style.borderRight = "3px solid #000";
+      }
+
+      // poziome podziałki co 4 wiersze
+      if ((rowIndex + 1) % 4 === 0 && rowIndex < 13) {
+        td.style.borderBottom = "3px solid #000";
+      }
+
+      tr.appendChild(td);
+    });
+
+    table.appendChild(tr);
+  });
+}
 function isDesktop() {
   const mobileKeywords = [
     'Android','webOS','iPhone','iPad',
@@ -1943,6 +2034,30 @@ for (let r = 0; r < 3; r++) { // Blok ma 3 wiersze
 
     return true;
 }
+  function isValid16(board, row, col, num) {
+
+    // wiersz
+    for (let x = 0; x < 16; x++) {
+        if (board[row][x] === num) return false;
+    }
+
+    // kolumna
+    for (let y = 0; y < 16; y++) {
+        if (board[y][col] === num) return false;
+    }
+
+    // blok 4x4
+    const boxRow = Math.floor(row / 4) * 4;
+    const boxCol = Math.floor(col / 4) * 4;
+
+for (let r = 0; r < 4; r++) { // Blok ma 4 wiersze
+        for (let c = 0; c < 4; c++) { // Blok ma 4 kolumny
+            if (board[boxRow + r][boxCol + c] === num) return false;
+        }
+    }
+
+    return true;
+}
  function isValid18(board, row, col, num) {
 
     // wiersz
@@ -2057,6 +2172,31 @@ function solveSudoku14(board) {
                         board[row][col] = num;
 
                         if (solveSudoku15(board)) return true;
+
+                        board[row][col] = 0;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+   function solveSudoku16(board) {
+
+    for (let row = 0; row < 16; row++) {
+        for (let col = 0; col < 16; col++) {
+
+            if (board[row][col] === 0) {
+
+                for (let num = 1; num <= 16; num++) {
+
+                    if (isValid16(board, row, col, num)) {
+                        board[row][col] = num;
+
+                        if (solveSudoku16(board)) return true;
 
                         board[row][col] = 0;
                     }
@@ -2218,6 +2358,29 @@ function parseBoard15FromKeloPlusCode(code) {
     const board = [];
     for (let i = 0; i < 225; i += 15) {
         board.push(arr.slice(i, i + 15));
+    }
+
+    return board;
+}
+  function parseBoard16FromKeloPlusCode(code) {
+
+    const cleaned = code.trim();
+
+    if (!cleaned.startsWith("[") || !cleaned.endsWith("]")) {
+        throw new Error("Nieprawidłowy format KeloPlusCode 16x16.");
+    }
+
+    const inner = cleaned.slice(1, -1);
+
+    const arr = inner.split(",").map(x => Number(x.trim()));
+
+    if (arr.length !== 256) {
+        throw new Error("Kod nie zawiera 256 elementów.");
+    }
+
+    const board = [];
+    for (let i = 0; i < 256; i += 16) {
+        board.push(arr.slice(i, i + 16));
     }
 
     return board;
@@ -2460,7 +2623,31 @@ function showSudoku10() {
         alert("Błąd: " + e.message);
     }
 }
+ let currentBoard16x16 = null;
+   function showSudoku16() {
 
+    const input = document.getElementById("kelo-code-16x16").value.trim();
+
+    try {
+        const board = parseBoard16FromKeloPlusCode(input);
+
+        currentBoard16x16 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
+
+        renderSudoku16(board, "initial-sudoku-table-16x16");
+
+        const solved = solveSudoku16(board);
+
+        if (!solved) {
+            alert("Nie znaleziono rozwiązania sudoku 16x16.");
+            return;
+        }
+
+        renderSudoku16(board, "solution-sudoku-table-16x16", true);
+
+    } catch (e) {
+        alert("Błąd: " + e.message);
+    }
+}
   let currentBoard18x18 = null;
    function showSudoku18() {
 
@@ -2725,7 +2912,7 @@ function enableRatingButtons(section) {
     document.getElementById("sudoku-container").style.display = "none";
     document.getElementById("word-search-info").style.display = "none";
     document.getElementById("cypher-puzzle-info").style.display = "none";
-    document.getElementById("sudoku16-info").style.display = "none";
+//    document.getElementById("sudoku16-info").style.display = "none";
     document.getElementById("sudoku10-info").style.display = "none";
     document.getElementById("sudokusm89-info").style.display = "none";
     document.getElementById("konkurs-info").style.display = "none";
@@ -2747,7 +2934,7 @@ function enableRatingButtons(section) {
       case 'sudoku': return { name: 'Sudoku' };
       case 'wordsearch': return { name: 'Wykreślanka' };
       case 'cypherpuzzle': return { name: 'Szyfrokrzyżówka' };
-      case 'sudoku16': return { name: 'Sudoku 16*16' };
+ //     case 'sudoku16': return { name: 'Sudoku 16*16' };
       case 'sudoku10': return { name: 'Sudoku 10x10' };
       case 'sudokusm89': return { name: 'Sudoku samurajskie ośmioplanszowe' };
       case 'konkurs': return { name: 'Konkurs' };
