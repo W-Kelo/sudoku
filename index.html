@@ -1108,58 +1108,35 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   activeSection = document.getElementById("sudoku-container");
 }
   /* --- SUDOKU 18x18 ---------------------------------------------------------- */
-else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length === 324) {
-  // 1) Zamiana KeloPlusCode -> tablica 18x18
+else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 324) {
+    // Kod wykona się tylko, gdy oba warunki są spełnione
+
+  // 1) zamiana KeloPlusCode -> tablica 18x18
   const boardToSolve = parseBoard18FromKeloPlusCode(initialBoardString);
 
-  // 2) Kopiujemy do wyświetlenia
+  // 2) kopiujemy do wyświetlenia
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  // 3) Rozwiązanie w Web Workerze
-  const worker = new Worker("sudoku18worker.js");
-  const solutionTable = document.getElementById("solution-sudoku-table");
-
-  if (solutionTable) {
-    solutionTable.innerHTML = "<tr><td>Liczenie rozwiązania… proszę czekać ⏳</td></tr>";
+  // 3) rozwiązanie
+  try { 
+    solveSudoku18(boardToSolve); 
+  } catch (e) { 
+    console.warn("solveSudoku18 error", e); 
   }
 
-  worker.postMessage(boardToSolve);
+  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  renderSudoku18(initialBoard, "initial-sudoku-table");
+  renderSudoku18(boardToSolve, "solution-sudoku-table", true);
 
-  worker.onmessage = (e) => {
-    const { solved, board: solvedBoard } = e.data;
+  document.getElementById("difficulty-level") &&
+    (document.getElementById("difficulty-level").innerText = difficulty);
+  document.getElementById("origin") &&
+    (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+  document.getElementById("notes") &&
+    (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
-    if (!solved) {
-      if (solutionTable) solutionTable.innerHTML = "<tr><td>Brak rozwiązania ❌</td></tr>";
-      return;
-    }
-
-    // Renderowanie wyników
-    try {
-      renderSudoku18(initialBoard, "initial-sudoku-table");
-      renderSudoku18(solvedBoard, "solution-sudoku-table", true);
-    } catch (err) {
-      console.error("Render 18x18 failed after worker:", err);
-    }
-  };
-
-  // Aktualizacja metadanych (poza worker.onmessage, aby wykonały się od razu)
-  const diffElem = document.getElementById("difficulty-level");
-  if (diffElem) diffElem.innerText = difficulty;
-
-  const originElem = document.getElementById("origin");
-  if (originElem) originElem.innerText = data.origin || "Brak informacji";
-
-  const notesElem = document.getElementById("notes");
-  if (notesElem) notesElem.innerHTML = parseNotesForLinks(data.notes);
-
-  // Przełączenie sekcji
-  const activeSection = document.getElementById("sudoku-container");
-  if (activeSection) {
-    activeSection.style.display = "block"; // Przykład aktywacji sekcji
-  }
-}   
-
-
+  activeSection = document.getElementById("sudoku-container");
+}
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
 else if (initialBoardString.length === 64) {
 
@@ -2054,6 +2031,31 @@ function solveSudoku14(board) {
 
     return true;
 }
+  function solveSudoku18(board) {
+
+    for (let row = 0; row < 18; row++) {
+        for (let col = 0; col < 18; col++) {
+
+            if (board[row][col] === 0) {
+
+                for (let num = 1; num <= 18; num++) {
+
+                    if (isValid18(board, row, col, num)) {
+                        board[row][col] = num;
+
+                        if (solveSudoku18(board)) return true;
+
+                        board[row][col] = 0;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
 
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
@@ -2420,47 +2422,31 @@ function showSudoku10() {
     }
 }
 
- let currentBoard18x18 = null;
+  let currentBoard18x18 = null;
+   function showSudoku18() {
 
-function showSudoku18() {
+    const input = document.getElementById("kelo-code-18x18").value.trim();
 
-  const input = document.getElementById("kelo-code-18x18").value.trim();
+    try {
+        const board = parseBoard18FromKeloPlusCode(input);
 
-  try {
-    const board = parseBoard18FromKeloPlusCode(input);
+        currentBoard18x18 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
 
-    // kopia do zapisu przez użytkownika
-    currentBoard18x18 = JSON.parse(JSON.stringify(board));
+        renderSudoku18(board, "initial-sudoku-table-18x18");
 
-    // renderujemy planszę wejściową
-    renderSudoku18(board, "initial-sudoku-table-18x18");
+        const solved = solveSudoku18(board);
 
-    // pokazujemy komunikat w tabeli rozwiązania
-    const solTable = document.getElementById("solution-sudoku-table-18x18");
-    solTable.innerHTML = "<tr><td>Liczenie rozwiązania… ⏳</td></tr>";
+        if (!solved) {
+            alert("Nie znaleziono rozwiązania sudoku 18x18.");
+            return;
+        }
 
-    // start workera
-    const worker = new Worker("sudoku18worker.js");
+        renderSudoku18(board, "solution-sudoku-table-18x18", true);
 
-    worker.postMessage(board);
-
-    worker.onmessage = function (e) {
-      const { solved, board: solvedBoard } = e.data;
-
-      if (!solved) {
-        solTable.innerHTML = "<tr><td>Brak rozwiązania ❌</td></tr>";
-        return;
-      }
-
-      // render rozwiązania
-      renderSudoku18(solvedBoard, "solution-sudoku-table-18x18", true);
-    };
-
-  } catch (e) {
-    alert("Błąd: " + e.message);
-  }
+    } catch (e) {
+        alert("Błąd: " + e.message);
+    }
 }
-
 
 // ========================= SUDOKU 8x8 ==============================
 
