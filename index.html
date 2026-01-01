@@ -1114,11 +1114,6 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   const boardToSolve = parseBoard16FromKeloPlusCode(initialBoardString);
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  try { 
-    solveSudoku16(boardToSolve); 
-  } catch (e) { 
-    console.warn("solveSudoku16 error", e); 
-  }
 
   // renderujemy tylko planszę początkową
   renderSudoku16(initialBoard, "initial-sudoku-table");
@@ -2218,31 +2213,7 @@ function solveSudoku14(board) {
 
     return true;
 }
-   function solveSudoku16(board) {
 
-    for (let row = 0; row < 16; row++) {
-        for (let col = 0; col < 16; col++) {
-
-            if (board[row][col] === 0) {
-
-                for (let num = 1; num <= 16; num++) {
-
-                    if (isValid16(board, row, col, num)) {
-                        board[row][col] = num;
-
-                        if (solveSudoku16(board)) return true;
-
-                        board[row][col] = 0;
-                    }
-                }
-
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
   function solveSudoku18(board) {
 
     for (let row = 0; row < 18; row++) {
@@ -2668,15 +2639,6 @@ function showSudoku10() {
         currentBoard16x16 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
 
         renderSudoku16(board, "initial-sudoku-table-16x16");
-
-        const solved = solveSudoku16(board);
-
-        if (!solved) {
-            alert("Nie znaleziono rozwiązania sudoku 16x16.");
-            return;
-        }
-
-        renderSudoku16(board, "solution-sudoku-table-16x16", true);
 
     } catch (e) {
         alert("Błąd: " + e.message);
