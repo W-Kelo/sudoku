@@ -1715,18 +1715,19 @@ function isDesktop() {
 
     table.appendChild(tr);
   });
-   // po narysowaniu planszy
+
+  // 2) najpierw sprzątamy i dodajemy przyciski "otwórz w nowej karcie"
   maybeAddOpenButtonFor18();
 
-  // przycisk „Rozwiąż w nowej karcie” tylko dla nierozwiązanej
+  // 3) teraz DOPIERO dodajemy przycisk beta – po sprzątaniu
   if (!isSolution) {
     addSolveButton18(board);
   } else {
     const old = document.getElementById("solve18btn");
     if (old) old.remove();
   }
-
 }
+
  function maybeAddOpenButtonFor18() {
 
   // zawsze najpierw sprzątaj stare przyciski
@@ -1794,6 +1795,7 @@ function isDesktop() {
   document
     .getElementById("initial-sudoku-table")
     .insertAdjacentElement("afterend", btn);
+  console.log("Add 18x18 beta button");
 }
 
 
