@@ -1719,21 +1719,17 @@ function isDesktop() {
   // 2) najpierw sprzątamy i dodajemy przyciski "otwórz w nowej karcie"
   maybeAddOpenButtonFor18();
 
-  // 3) teraz DOPIERO dodajemy przycisk beta – po sprzątaniu
-  if (!isSolution) {
-    addSolveButton18(board);
-  } else {
-    const old = document.getElementById("solve18btn");
-    if (old) old.remove();
-  }
+// przycisk beta dodajemy WYŁĄCZNIE przy renderze planszy początkowej
+if (!isSolution && containerId === "initial-sudoku-table") {
+  addSolveButton18(board);
+}
+
 }
 
  function maybeAddOpenButtonFor18() {
 
   // zawsze najpierw sprzątaj stare przyciski
   document.querySelectorAll(".open-new-tab-btn").forEach(b => b.remove());
-  const oldSolve = document.getElementById("solve18btn");
-  if (oldSolve) oldSolve.remove();
 
   if (!isDesktop()) return;
 
@@ -1797,7 +1793,25 @@ function isDesktop() {
     .insertAdjacentElement("afterend", btn);
   console.log("Add 18x18 beta button");
 }
+function clear18Artifacts() {
+  // usuń przyciski 18x18
+  document.querySelectorAll(".open-new-tab-btn").forEach(b => b.remove());
+  const solveBtn = document.getElementById("solve18btn");
+  if (solveBtn) solveBtn.remove();
 
+  // wyczyść dane 18x18 pozostawione na tabelach
+  const init = document.getElementById("initial-sudoku-table");
+  const sol  = document.getElementById("solution-sudoku-table");
+
+  if (init) {
+    delete init.dataset.board18;
+    delete init.dataset.isSolution;
+  }
+  if (sol) {
+    delete sol.dataset.board18;
+    delete sol.dataset.isSolution;
+  }
+}
 
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
@@ -2160,25 +2174,7 @@ function isValid4(board, row, col, num) {
 
     return board;
 }
-function clear18Artifacts() {
-  // usuń przyciski 18x18
-  document.querySelectorAll(".open-new-tab-btn").forEach(b => b.remove());
-  const solveBtn = document.getElementById("solve18btn");
-  if (solveBtn) solveBtn.remove();
 
-  // wyczyść dane 18x18 pozostawione na tabelach
-  const init = document.getElementById("initial-sudoku-table");
-  const sol  = document.getElementById("solution-sudoku-table");
-
-  if (init) {
-    delete init.dataset.board18;
-    delete init.dataset.isSolution;
-  }
-  if (sol) {
-    delete sol.dataset.board18;
-    delete sol.dataset.isSolution;
-  }
-}
 
 function parseBoard14FromKeloPlusCode(code) {
 
