@@ -1168,35 +1168,74 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 }
 
   /* --- SUDOKU 18x18 ---------------------------------------------------------- */
+/* --- SUDOKU 18x18 ---------------------------------------------------------- */
 else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 324) {
-    // Kod wykona się tylko, gdy oba warunki są spełnione
 
-  // 1) zamiana KeloPlusCode -> tablica 18x18
   const boardToSolve = parseBoard18FromKeloPlusCode(initialBoardString);
-
-  // 2) kopiujemy do wyświetlenia
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  // 3) rozwiązanie
   try { 
     solveSudoku18(boardToSolve); 
   } catch (e) { 
     console.warn("solveSudoku18 error", e); 
   }
 
-  // 4) renderujemy – UWAGA: przekazujemy TABLICE, nie string
+  // renderujemy tylko planszę początkową (nic nie zmieniamy)
   renderSudoku18(initialBoard, "initial-sudoku-table");
-  renderSudoku18(boardToSolve, "solution-sudoku-table", true);
+
+  // ⛔ NIE renderujemy rozwiązanej tabeli
+  // zamiast tego pokazujemy OBRAZ z Google Drive
+  const solContainer = document.getElementById("solution-sudoku-table");
+  if (solContainer) {
+
+    const notes = data.notes || "";
+
+    // wyciągnięcie ID pliku z różnych typów linków Google Drive
+    const idMatch =
+      notes.match(/\/d\/([^/]+)\//) ||               // standard file link
+      notes.match(/id=([^&]+)/) ||                   // ?id=xxxx
+      notes.match(/https?:\/\/[^\s]+/);              // fallback: cały link
+
+    let fileId = null;
+    if (idMatch) fileId = idMatch[1] || idMatch[0];
+
+    // finalny URL obrazka
+    const imgUrl = fileId
+      ? `https://drive.google.com/uc?export=view&id=${fileId}`
+      : "";
+
+    solContainer.innerHTML = `
+      <div style="
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        padding:20px;
+        width:100%;
+      ">
+        <img src="${imgUrl}" alt="Rozwiązanie sudoku"
+          style="
+            max-width:100%;
+            height:auto;
+            border-radius:18px;
+            box-shadow:0 18px 35px rgba(0,0,0,.25);
+            border:1px solid rgba(255,255,255,.25);
+          ">
+      </div>
+    `;
+  }
 
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
+
   document.getElementById("origin") &&
     (document.getElementById("origin").innerText = data.origin || "Brak informacji");
+
   document.getElementById("notes") &&
     (document.getElementById("notes").innerHTML = parseNotesForLinks(data.notes));
 
   activeSection = document.getElementById("sudoku-container");
 }
+
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
 else if (initialBoardString.length === 64) {
 
