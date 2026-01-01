@@ -1170,97 +1170,129 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 /* --- SUDOKU 18x18 ---------------------------------------------------------- */
 else if (initialBoardString.trim().startsWith("[") && initialBoardString.split(",").length == 324) {
 
-  // 1) zamiana KeloPlusCode -> tablica 18x18
   const boardToSolve = parseBoard18FromKeloPlusCode(initialBoardString);
-
-  // 2) kopiujemy do wyświetlenia
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  // 3) rozwiązanie
   try { 
     solveSudoku18(boardToSolve); 
   } catch (e) { 
     console.warn("solveSudoku18 error", e); 
   }
 
-  // 4) renderujemy tylko planszę początkową
+  // render tylko nierozwiązanej planszy
   renderSudoku18(initialBoard, "initial-sudoku-table");
 
-  // ➜ zamiast rozwiązanej planszy pokazujemy obraz z Google Drive
+  // zamiast rozwiązania — obraz z Google Drive
   const solContainer = document.getElementById("solution-sudoku-table");
   if (solContainer) {
 
     const notes = data.notes || "";
-
-    // --- WYCIĄGANIE ID Z RÓŻNYCH FORMATÓW GOOGLE DRIVE ---
-    // Obsługiwane m.in.:
-    // https://drive.google.com/file/d/ID/view
-    // https://drive.google.com/open?id=ID
-    // https://drive.google.com/uc?id=ID
-    // https://drive.google.com/thumbnail?id=ID
-    // https://drive.google.com/file/d/ID/
-    // ?id=ID
     let fileId = null;
 
     const patterns = [
-      /\/d\/([^/]+)\//,          // /d/ID/
-      /id=([^&]+)/,              // ?id=ID
-      /\/d\/([^/?#]+)$/,         // /d/ID
-      /\/folders\/([^/]+)/,      // folder (gdyby ktoś podał)
+      /\/d\/([^/]+)\//,
+      /id=([^&]+)/,
+      /\/d\/([^/?#]+)$/,
+      /\/folders\/([^/]+)/
     ];
 
     for (const p of patterns) {
       const m = notes.match(p);
-      if (m && m[1]) {
-        fileId = m[1];
-        break;
-      }
+      if (m && m[1]) { fileId = m[1]; break; }
     }
 
-    // jeśli nic nie znaleziono — spróbujmy złapać cały token 25–60 znaków
     if (!fileId) {
       const fallback = notes.match(/[A-Za-z0-9_-]{20,}/);
       if (fallback) fileId = fallback[0];
     }
 
-    // finalny „niezniszczalny” link z lh3.googleusercontent
-    const imgUrl = fileId
-      ? `https://lh3.googleusercontent.com/u/0/d/${fileId}`
-      : "";
+    const imgUrl = fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : "";
 
-    // Wstawienie obrazu
-    solContainer.innerHTML = imgUrl
-      ? `
-        <div style="
-          display:flex;
+    // wykrycie dark mode
+    const darkMode = window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const overlayBg = darkMode
+      ? "rgba(0,0,0,0.92)"
+      : "rgba(255,255,255,0.95)";
+
+    const borderColor = darkMode
+      ? "rgba(255,255,255,0.22)"
+      : "rgba(0,0,0,0.15)";
+
+    const shadow = darkMode
+      ? "0 22px 40px rgba(0,0,0,.65)"
+      : "0 22px 40px rgba(0,0,0,.35)";
+
+    solContainer.innerHTML = imgUrl ? `
+      <div style="
+        width:100%;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        padding:20px;
+      ">
+        <img
+          id="solution-image-18"
+          src="${imgUrl}"
+          alt="Rozwiązanie sudoku 18x18"
+          style="
+            max-width:100%;
+            height:auto;
+            border-radius:18px;
+            border:1px solid ${borderColor};
+            box-shadow:${shadow};
+            cursor:zoom-in;
+            transition:transform .25s ease, box-shadow .25s ease;
+          "
+          onclick="
+            const ex = document.getElementById('zoom-overlay-18');
+            ex.style.display = 'flex';
+          "
+          onerror="
+            this.style.display='none';
+            this.insertAdjacentHTML('afterend',
+              '<div style=&quot;color:#b00;font-weight:600;text-align:center&quot;>Nie udało się wczytać obrazu.</div>'
+            );
+          "
+        >
+      </div>
+
+      <!-- LIGHTBOX / FULLSCREEN ZOOM -->
+      <div
+        id="zoom-overlay-18"
+        style="
+          display:none;
+          position:fixed;
+          inset:0;
+          background:${overlayBg};
+          backdrop-filter:blur(4px);
+          z-index:9999;
           justify-content:center;
           align-items:center;
-          padding:20px;
-          width:100%;
-        ">
-          <img 
-            src="${imgUrl}" 
-            alt="Rozwiązanie sudoku 18x18"
-            style="
-              max-width:100%;
-              height:auto;
-              border-radius:18px;
-              box-shadow:0 18px 35px rgba(0,0,0,.25);
-              border:1px solid rgba(255,255,255,.15);
-            "
-            onerror="this.style.display='none';
-                     this.insertAdjacentHTML('afterend',
-                       '<div style=\\'color:#b00;font-weight:600;text-align:center\\'>Nie udało się wczytać obrazu.</div>'
-                     );"
-          >
-        </div>
-      `
-      : `<div style="padding:20px;text-align:center;color:#b00;font-weight:600;">
-           Brak poprawnego linku do obrazu w notatkach.
-         </div>`;
+        "
+        onclick="this.style.display='none';"
+      >
+        <img
+          src='${imgUrl}'
+          style="
+            max-width:95%;
+            max-height:95%;
+            border-radius:20px;
+            border:1px solid ${borderColor};
+            box-shadow:${shadow};
+            cursor:zoom-out;
+            transition:transform .25s ease;
+          "
+        >
+      </div>
+    ` : `
+      <div style="padding:20px;text-align:center;color:#b00;font-weight:600;">
+        Brak poprawnego linku do obrazu w notatkach.
+      </div>
+    `;
   }
 
-  // pozostałe pola pozostają bez zmian
   document.getElementById("difficulty-level") &&
     (document.getElementById("difficulty-level").innerText = difficulty);
 
@@ -1272,6 +1304,7 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 
   activeSection = document.getElementById("sudoku-container");
 }
+
 
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
 else if (initialBoardString.length === 64) {
