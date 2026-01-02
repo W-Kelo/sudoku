@@ -1179,20 +1179,21 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
     console.warn("solveSudoku18 error", e); 
   }
 
-  // render tylko nierozwiązanej planszy
+  // render tylko planszy nierozwiązanej
   renderSudoku18(initialBoard, "initial-sudoku-table");
 
   const solContainer = document.getElementById("solution-sudoku-table");
 
   if (solContainer) {
 
+    // ───────── WYCIĄGANIE ID GOOGLE DRIVE ─────────
     const notes = data.notes || "";
     let fileId = null;
 
     const patterns = [
       /\/d\/([^/]+)\//,
       /id=([^&]+)/,
-      /\/d\/([^/?#]+)$/,
+      /\/d\/([^/?#]+)$/
     ];
 
     for (const p of patterns) {
@@ -1207,38 +1208,55 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 
     const imgUrl = fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : "";
 
-    // DARK MODE detection
+    // ───────── TRYB DARK ─────────
     const darkMode = window.matchMedia &&
       window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // 🔥 WYMUSZONE CENTROWANIE KONTENERA
+    // ───────── WYMIAR = WYMIAR NIERZĄZANEJ PLANSZY ─────────
+    const refTable = document.getElementById("initial-sudoku-table");
+
+    // domyślnie, gdyby nie znaleziono, załóż 500px
+    const boardSize = refTable ? refTable.offsetWidth : 500;
+
+    // twarde centrowanie kontenera
     solContainer.style.display = "flex";
     solContainer.style.justifyContent = "center";
     solContainer.style.alignItems = "center";
     solContainer.style.width = "100%";
-    solContainer.style.padding = "20px";
     solContainer.style.boxSizing = "border-box";
 
+    // ───────── WSTAWIENIE KWADRATU + OBRAZU ─────────
     solContainer.innerHTML = imgUrl ? `
-      <img
-        id="solution-image-18"
-        src="${imgUrl}"
-        alt="Rozwiązanie sudoku 18x18"
+      <div
         style="
+          width:${boardSize}px;
           max-width:100%;
-          height:auto;
-          border-radius:18px;
-          border:1px solid ${darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'};
-          box-shadow:${darkMode ? '0 22px 45px rgba(0,0,0,.75)' : '0 22px 45px rgba(0,0,0,.35)'};
-          cursor:zoom-in;
-          transition:transform .25s ease, filter .25s ease;
-          ${darkMode ? 'filter:brightness(.9);' : ''}
-        "
-        onclick="
-          const o = document.getElementById('zoom-overlay-18');
-          o.style.display = 'flex';
+          aspect-ratio:1 / 1;
+          position:relative;
+          display:flex;
+          justify-content:center;
+          align-items:center;
         "
       >
+        <img
+          id="solution-image-18"
+          src="${imgUrl}"
+          alt="Rozwiązanie sudoku 18x18"
+          style="
+            width:100%;
+            height:100%;
+            object-fit:contain;
+            border-radius:12px;
+            border:1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'};
+            box-shadow:${darkMode ? '0 18px 40px rgba(0,0,0,.75)' : '0 18px 40px rgba(0,0,0,.35)'};
+            cursor:zoom-in;
+            ${darkMode ? 'filter:brightness(.9);' : ''}
+          "
+          onclick="
+            document.getElementById('zoom-overlay-18').style.display='flex';
+          "
+        >
+      </div>
 
       <!-- FULLSCREEN ZOOM -->
       <div
@@ -1250,7 +1268,7 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
           z-index:9999;
           justify-content:center;
           align-items:center;
-          background:${darkMode ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.95)'};
+          background:${darkMode ? 'rgba(0,0,0,.95)' : 'rgba(255,255,255,.95)'};
           backdrop-filter:blur(4px);
         "
         onclick="this.style.display='none';"
@@ -1260,11 +1278,10 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
           style="
             max-width:96%;
             max-height:96%;
-            border-radius:20px;
-            border:1px solid ${darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'};
-            box-shadow:${darkMode ? '0 25px 50px rgba(0,0,0,.85)' : '0 25px 50px rgba(0,0,0,.35)'};
-            cursor:zoom-out;
+            border-radius:16px;
+            border:1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'};
             ${darkMode ? 'filter:brightness(.9);' : ''}
+            cursor:zoom-out;
           "
         >
       </div>
@@ -1286,6 +1303,7 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 
   activeSection = document.getElementById("sudoku-container");
 }
+
 
 
 /* --- SUDOKU 8x8 ---------------------------------------------------------- */
