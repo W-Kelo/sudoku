@@ -627,6 +627,7 @@ function callApi(params) {
     // Wywołanie funkcji po załadowaniu strony
     hideButtonOnDesktop();
   function renderSudoku(boardString, containerId, isSolution = false) {
+    clear18Artifacts();
     const table = document.getElementById(containerId);
     if (!table) return;
     table.innerHTML = "";
@@ -2016,12 +2017,10 @@ if (!isSolution && containerId === "initial-sudoku-table") {
     .insertAdjacentElement("afterend", btn);
 }
 function clear18Artifacts() {
-  // usuń przyciski 18x18
   document.querySelectorAll(".open-new-tab-btn").forEach(b => b.remove());
   const solveBtn = document.getElementById("solve18btn");
   if (solveBtn) solveBtn.remove();
 
-  // wyczyść dane 18x18 pozostawione na tabelach
   const init = document.getElementById("initial-sudoku-table");
   const sol  = document.getElementById("solution-sudoku-table");
 
@@ -2033,7 +2032,12 @@ function clear18Artifacts() {
     delete sol.dataset.board18;
     delete sol.dataset.isSolution;
   }
+
+  if (sol) {
+    sol.removeAttribute("style");   
+  }
 }
+
 
 function solveSudoku4(board) {
   for (let row = 0; row < 4; row++) {
