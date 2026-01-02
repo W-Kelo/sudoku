@@ -1173,12 +1173,6 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   const boardToSolve = parseBoard18FromKeloPlusCode(initialBoardString);
   const initialBoard = JSON.parse(JSON.stringify(boardToSolve));
 
-  try { 
-    solveSudoku18(boardToSolve); 
-  } catch (e) { 
-    console.warn("solveSudoku18 error", e); 
-  }
-
   // render tylko planszy nierozwiązanej
   renderSudoku18(initialBoard, "initial-sudoku-table");
 
@@ -2323,32 +2317,7 @@ function solveSudoku14(board) {
     return true;
 }
 
-  function solveSudoku18(board) {
-
-    for (let row = 0; row < 18; row++) {
-        for (let col = 0; col < 18; col++) {
-
-            if (board[row][col] === 0) {
-
-                for (let num = 1; num <= 18; num++) {
-
-                    if (isValid18(board, row, col, num)) {
-                        board[row][col] = num;
-
-                        if (solveSudoku18(board)) return true;
-
-                        board[row][col] = 0;
-                    }
-                }
-
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
+ 
 function isValid4(board, row, col, num) {
   for (let i = 0; i < 4; i++) {
     if (board[row][i] === num) return false;        // w wierszu
@@ -2764,15 +2733,6 @@ function showSudoku10() {
         currentBoard18x18 = JSON.parse(JSON.stringify(board)); // kopia do zapisu
 
         renderSudoku18(board, "initial-sudoku-table-18x18");
-
-        const solved = solveSudoku18(board);
-
-        if (!solved) {
-            alert("Nie znaleziono rozwiązania sudoku 18x18.");
-            return;
-        }
-
-        renderSudoku18(board, "solution-sudoku-table-18x18", true);
 
     } catch (e) {
         alert("Błąd: " + e.message);
