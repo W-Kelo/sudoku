@@ -1182,8 +1182,8 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
   // render tylko nierozwiązanej planszy
   renderSudoku18(initialBoard, "initial-sudoku-table");
 
-  // zamiast rozwiązania — obraz z Google Drive
   const solContainer = document.getElementById("solution-sudoku-table");
+
   if (solContainer) {
 
     const notes = data.notes || "";
@@ -1193,7 +1193,6 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
       /\/d\/([^/]+)\//,
       /id=([^&]+)/,
       /\/d\/([^/?#]+)$/,
-      /\/folders\/([^/]+)/
     ];
 
     for (const p of patterns) {
@@ -1208,81 +1207,64 @@ else if (initialBoardString.trim().startsWith("[") && initialBoardString.split("
 
     const imgUrl = fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : "";
 
-    // wykrycie dark mode
+    // DARK MODE detection
     const darkMode = window.matchMedia &&
       window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    const overlayBg = darkMode
-      ? "rgba(0,0,0,0.92)"
-      : "rgba(255,255,255,0.95)";
-
-    const borderColor = darkMode
-      ? "rgba(255,255,255,0.22)"
-      : "rgba(0,0,0,0.15)";
-
-    const shadow = darkMode
-      ? "0 22px 40px rgba(0,0,0,.65)"
-      : "0 22px 40px rgba(0,0,0,.35)";
+    // 🔥 WYMUSZONE CENTROWANIE KONTENERA
+    solContainer.style.display = "flex";
+    solContainer.style.justifyContent = "center";
+    solContainer.style.alignItems = "center";
+    solContainer.style.width = "100%";
+    solContainer.style.padding = "20px";
+    solContainer.style.boxSizing = "border-box";
 
     solContainer.innerHTML = imgUrl ? `
-      <div style="
-        width:100%;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        padding:20px;
-      ">
-        <img
-          id="solution-image-18"
-          src="${imgUrl}"
-          alt="Rozwiązanie sudoku 18x18"
-          style="
-            max-width:100%;
-            height:auto;
-            border-radius:18px;
-            border:1px solid ${borderColor};
-            box-shadow:${shadow};
-            cursor:zoom-in;
-            transition:transform .25s ease, box-shadow .25s ease;
-          "
-          onclick="
-            const ex = document.getElementById('zoom-overlay-18');
-            ex.style.display = 'flex';
-          "
-          onerror="
-            this.style.display='none';
-            this.insertAdjacentHTML('afterend',
-              '<div style=&quot;color:#b00;font-weight:600;text-align:center&quot;>Nie udało się wczytać obrazu.</div>'
-            );
-          "
-        >
-      </div>
+      <img
+        id="solution-image-18"
+        src="${imgUrl}"
+        alt="Rozwiązanie sudoku 18x18"
+        style="
+          max-width:100%;
+          height:auto;
+          border-radius:18px;
+          border:1px solid ${darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'};
+          box-shadow:${darkMode ? '0 22px 45px rgba(0,0,0,.75)' : '0 22px 45px rgba(0,0,0,.35)'};
+          cursor:zoom-in;
+          transition:transform .25s ease, filter .25s ease;
+          ${darkMode ? 'filter:brightness(.9);' : ''}
+        "
+        onclick="
+          const o = document.getElementById('zoom-overlay-18');
+          o.style.display = 'flex';
+        "
+      >
 
-      <!-- LIGHTBOX / FULLSCREEN ZOOM -->
+      <!-- FULLSCREEN ZOOM -->
       <div
         id="zoom-overlay-18"
         style="
           display:none;
           position:fixed;
           inset:0;
-          background:${overlayBg};
-          backdrop-filter:blur(4px);
           z-index:9999;
           justify-content:center;
           align-items:center;
+          background:${darkMode ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.95)'};
+          backdrop-filter:blur(4px);
         "
         onclick="this.style.display='none';"
       >
         <img
           src='${imgUrl}'
           style="
-            max-width:95%;
-            max-height:95%;
+            max-width:96%;
+            max-height:96%;
             border-radius:20px;
-            border:1px solid ${borderColor};
-            box-shadow:${shadow};
+            border:1px solid ${darkMode ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'};
+            box-shadow:${darkMode ? '0 25px 50px rgba(0,0,0,.85)' : '0 25px 50px rgba(0,0,0,.35)'};
             cursor:zoom-out;
-            transition:transform .25s ease;
+            ${darkMode ? 'filter:brightness(.9);' : ''}
           "
         >
       </div>
