@@ -3132,10 +3132,18 @@ function drawWheel() {
 }
 
 function spinWheel() {
-  document.getElementById('spin-btn').disabled = true;
-  cnSpinAngleStart = Math.random() * 10 + 10;
+  const btn = document.getElementById('spin-btn');
+  if(btn) btn.disabled = true;
+
+  // 1. Losujemy siłę początkową (wpływa na dystans)
+  cnSpinAngleStart = (Math.random() * 15) + 30; 
+  
   cnSpinTime = 0;
-  cnSpinTimeTotal = Math.random() * 3 + 4 * 1000;
+  
+  // 2. Losujemy czas trwania (wpływa na to, jak długo trwa animacja)
+  // Teraz będzie to od 3 do 6 sekund
+  cnSpinTimeTotal = (Math.random() * 3000) + 3000; 
+  
   rotateWheel();
 }
 
