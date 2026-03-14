@@ -139,6 +139,7 @@ input{
 input.ok{background:var(--ok);}
 input.bad{background:var(--bad);}
 
+/* Klasyczne Toasty dla wersji Komputerowej */
 #toasts{
   position:fixed;
   right:15px;
@@ -188,6 +189,7 @@ input.bad{background:var(--bad);}
 #mobileMenuBtn { display: none; }
 #mobileMenuBackdrop { display: none; }
 #mobileBottomBar { display: none; } 
+#mobileTicker { display: none; } /* Pasek TV schowany na PC */
 
 @media(max-width:900px){
   #mobileMenuBtn {
@@ -253,12 +255,19 @@ input.bad{background:var(--bad);}
     margin: 0; 
   }
 
+  /* Wyłączenie klasycznych dymków na telefonie */
+  #toasts {
+    display: none !important;
+  }
+
+  /* NOWOŚĆ: Mobilny Pasek Narzędzi na Dole */
   #mobileBottomBar {
     display: flex;
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
+    height: 64px; /* Ustalona sztywna wysokość dla bazy */
     background: #ffffff;
     box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
     z-index: 1000;
@@ -289,6 +298,61 @@ input.bad{background:var(--bad);}
     color: #007bff;
     transform: none;
     background: rgba(0, 123, 255, 0.05);
+  }
+
+  /* NOWOŚĆ: Przewijany Pasek Wiadomości TV */
+  #mobileTicker {
+    display: flex;
+    position: fixed;
+    /* Pozycjonowanie idealnie nad dolnym paskiem a'la Onet */
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    width: 100%;
+    height: 30px;
+    background: #222;
+    color: #fff;
+    z-index: 999;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+  }
+
+  .ticker-label {
+    background: #007bff;
+    color: white;
+    padding: 0 10px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 2;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ticker-track {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .ticker-msg {
+    position: absolute;
+    white-space: nowrap;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    font-weight: 500;
+    /* Animacja przesuwająca tekst */
+    animation: scrollTicker 4.5s linear forwards;
+  }
+
+  @keyframes scrollTicker {
+    to { transform: translate(calc(-100vw - 100%), -50%); }
   }
 }
 </style>
@@ -340,6 +404,13 @@ input.bad{background:var(--bad);}
   </div>
 </div>
 
+<!-- Przewijany Pasek Wiadomości TV (Widoczny tylko na Mobile) -->
+<div id="mobileTicker">
+  <div class="ticker-label"><i class="fas fa-info-circle"></i> INFO</div>
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<!-- Mobilny Pasek Narzędzi na Dole -->
 <div id="mobileBottomBar">
   <button id="mBtnStart"><i class="fas fa-play"></i><span>Start</span></button>
   <button id="mBtnHint"><i class="fas fa-lightbulb"></i><span>Podpowiedź</span></button>
@@ -347,6 +418,7 @@ input.bad{background:var(--bad);}
   <button id="mBtnSave"><i class="fas fa-save"></i><span>Zapisz</span></button>
 </div>
 
+<!-- Klasyczne toasty dla PC -->
 <div id="toasts"></div>
 
 <div id="modalOverlay">
@@ -371,13 +443,25 @@ input.bad{background:var(--bad);}
 const SIZE = 9;
 const SUB_SIZE = 3;
 
-/* ------------------ UTILS ------------------ */
+/* ------------------ UTILS (ZAKTUALIZOWANE O PASEK TV) ------------------ */
 function toast(text){
-  const t=document.createElement("div");
-  t.className="toast";
-  t.textContent=text;
+  // 1. Obsługa klasyczna dla Komputerów (Dymki prawy-dolny róg)
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = text;
   document.getElementById("toasts").appendChild(t);
-  setTimeout(()=>t.remove(),2800);
+  setTimeout(()=>t.remove(), 2800);
+
+  // 2. Obsługa Paska Wiadomości TV dla Telefonów
+  const track = document.getElementById("tickerTrack");
+  if(track) {
+      // Czyścimy poprzedni tekst, aby przy szybkim klikaniu powstał efekt "Pilne Newsy"
+      track.innerHTML = ""; 
+      const msg = document.createElement("div");
+      msg.className = "ticker-msg";
+      msg.textContent = text;
+      track.appendChild(msg);
+  }
 }
 
 function randomToast(arr){
@@ -451,8 +535,7 @@ const BOARD_KEY = "sudoku9_state_" + (raw ? btoa(raw).substring(0,16) : "default
     };
 })();
 
-/* ------------------ AI SOLVER (NOWOŚĆ) ------------------ */
-// Rozwiązuje planszę w ułamku sekundy, byśmy mieli "wzorzec" do przegrupowywania liczb
+/* ------------------ AI SOLVER ------------------ */
 let masterSolution = null;
 
 function generateMasterSolution() {
@@ -495,16 +578,12 @@ function isValid(board, r, c, val) {
   return true;
 }
 
-/* 
-   INTELIGENTNE PRZEGRUPOWANIE KONFLIKTÓW
-   Nie usuwa ilości liczb, tylko je "naprawia" i przesuwa na właściwe miejsca.
-*/
+/* ------------------ PRZEGRUPOWANIE KONFLIKTÓW ------------------ */
 function removeConflicts(silent = false) {
     if(!masterSolution) generateMasterSolution();
 
     let wrongCells = [];
     
-    // Skanujemy planszę szukając błędnych liczb (według rozwiązania ostatecznego)
     for(let r=0; r<SIZE; r++) {
         for(let c=0; c<SIZE; c++) {
             if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
@@ -518,12 +597,10 @@ function removeConflicts(silent = false) {
     let relocatedCount = wrongCells.length;
 
     if(relocatedCount > 0) {
-        // Krok 1: Kasujemy błędne miejsca
         for(let cell of wrongCells) {
             workBoard[cell.r][cell.c] = 0;
         }
 
-        // Krok 2: Znajdujemy wolne, zdatne miejsca
         let emptySpots = [];
         for(let r=0; r<SIZE; r++) {
             for(let c=0; c<SIZE; c++) {
@@ -533,10 +610,8 @@ function removeConflicts(silent = false) {
             }
         }
 
-        // Losujemy kolejność, by rozrzucić naprawione liczby losowo
         emptySpots.sort(() => Math.random() - 0.5);
 
-        // Krok 3: Wstawiamy dokładnie taką samą ilość liczb z powrotem, ale POPRAWNYCH!
         for(let i=0; i<relocatedCount; i++) {
             let spot = emptySpots[i];
             workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
@@ -612,7 +687,7 @@ let started = false, mode = "later";
 start.onclick=()=>{
   if(started) return;
   started=true;
-  if(!masterSolution) generateMasterSolution(); // Start AI w tle
+  if(!masterSolution) generateMasterSolution(); 
   boardOverlay.classList.add("hidden");
   document.querySelectorAll("#board input").forEach(inp => {
     if(inp.dataset.given === "0") inp.disabled = false;
@@ -653,7 +728,6 @@ function checkFinished(){
 function giveHint() {
     if(!masterSolution) generateMasterSolution();
     
-    // Zawsze wymusza organizację przed dodaniem, gwarantując spójność
     removeConflicts(true); 
     
     let emptySpots = [];
@@ -665,13 +739,11 @@ function giveHint() {
 
     if(emptySpots.length === 0) return false;
 
-    // Losujemy punkt i wymuszamy idealnie pasującą liczbę z Master Solution
     let spot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
     workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
 
     redrawInputs();
     
-    // Graficzne zaznaczenie nowej podpowiedzi (dla lepszego User Experience)
     const inp = table.rows[spot.r].cells[spot.c].firstChild;
     inp.classList.add("ok");
 
@@ -718,7 +790,6 @@ save.onclick=()=>{
   toast("Stan gry został zapisany!");
 };
 
-// Zoptymalizowany Zoom
 let z = 1; 
 let mobileZ = 1; 
 
@@ -754,7 +825,7 @@ function beep(f){
   } catch(e) {}
 }
 
-/* ------------ LOGIKA MENU MOBILNEGO ------------ */
+/* ------------ LOGIKA MENU MOBILNEGO I SKALOWANIA ------------ */
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const toolsPanel = document.getElementById('tools');
 const menuBackdrop = document.getElementById('mobileMenuBackdrop');
@@ -794,7 +865,8 @@ function adjustResponsiveBoard() {
     
     const col = document.getElementById('boardCol');
     const availableWidth = col.clientWidth - 20; 
-    const availableHeight = col.clientHeight - 130; 
+    // Odjęcie jeszcze większej przestrzeni z dołu, by ominąć zarówno BottomBar jak i nowy Ticker TV (~165px odjęcia)
+    const availableHeight = col.clientHeight - 165; 
 
     const boardSize = table.offsetWidth || 405; 
     const baseScale = Math.min(availableWidth / boardSize, availableHeight / boardSize);
