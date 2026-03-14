@@ -100,7 +100,6 @@ td{
   position:relative;
 }
 
-/* Grube linie dla Sudoku 9x9 (co 3 komórki) */
 .bold-r{border-right:3px solid #000;}
 .bold-b{border-bottom:3px solid #000;}
 
@@ -187,6 +186,7 @@ input.bad{background:var(--bad);}
     </div>
     <div class="tool-group">
       <button id="hint">Podpowiedź</button>
+      <button id="hint10">Podpowiedź 10</button>
       <button id="removeConflictsBtn">Usuń konflikty</button>
       <button id="resetColorsBtn">Zresetuj kolory</button>
     </div>
@@ -223,7 +223,7 @@ input.bad{background:var(--bad);}
 
 <div id="loadSaveModal">
   <div class="modalBox">
-    <h3>Znaleziono zapisany stan</h3>
+    <h3>Znaleziono zapisany stan gry</h3>
     <p id="loadSaveText"></p>
     <button id="btnLoadSave">Załaduj</button>
     <button onclick="closeLoadSave()">Anuluj</button>
@@ -258,6 +258,10 @@ function closeModal(){
   modalOverlay.style.display="none";
 }
 
+function closeLoadSave(){
+  loadSaveModal.style.display="none";
+}
+
 /* ------------------ BACKGROUND ------------------ */
 const cvs=document.getElementById("bgAnim");
 const ctx=cvs.getContext("2d");
@@ -277,7 +281,7 @@ const bubbles=[...Array(20)].map(()=>({
   requestAnimationFrame(animBg);
 })();
 
-/* ------------------ DATA ------------------ */
+/* ------------------ DATA & SAVE SYSTEM ------------------ */
 function get(name){ return new URLSearchParams(location.search).get(name); }
 const raw = get("board");
 let initialBoard;
@@ -286,15 +290,31 @@ try {
     if(raw) {
         initialBoard = JSON.parse(decodeURIComponent(raw));
     } else {
-        // Przykładowa tablica jeśli brak danych w URL
         initialBoard = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
     }
 } catch(e) {
     initialBoard = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
 }
 
-const workBoard = JSON.parse(JSON.stringify(initialBoard));
-const BOARD_KEY = "sudoku9_state_" + (raw || "default");
+let workBoard = JSON.parse(JSON.stringify(initialBoard));
+const BOARD_KEY = "sudoku9_state_" + (raw ? btoa(raw).substring(0,16) : "default");
+
+// Funkcja sprawdzająca zapis zaraz po załadowaniu skryptu
+(function checkSavedGame(){
+    const savedData = localStorage.getItem(BOARD_KEY);
+    const savedDate = localStorage.getItem(BOARD_KEY + "_date");
+    if(!savedData) return;
+
+    loadSaveText.textContent = "Zapis wykonano: " + (savedDate ? new Date(savedDate).toLocaleString() : "nieznany czas");
+    loadSaveModal.style.display = "flex";
+
+    btnLoadSave.onclick = () => {
+        workBoard = JSON.parse(savedData);
+        redrawInputs();
+        closeLoadSave();
+        toast("Stan gry załadowany");
+    };
+})();
 
 /* ------------------ LOGIC ------------------ */
 function isValid(board, r, c, val) {
@@ -314,6 +334,23 @@ function isValid(board, r, c, val) {
   return true;
 }
 
+function removeConflicts(silent = false) {
+    let count = 0;
+    for(let r=0; r<SIZE; r++) {
+        for(let c=0; c<SIZE; c++) {
+            if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
+                if(!isValid(workBoard, r, c, workBoard[r][c])) {
+                    workBoard[r][c] = 0;
+                    count++;
+                }
+            }
+        }
+    }
+    if(count > 0) redrawInputs();
+    if(!silent && count > 0) toast("Usunięto konflikty: " + count);
+    return count;
+}
+
 /* ------------------ TABLE GENERATION ------------------ */
 const table = document.getElementById("board");
 for(let r=0; r<SIZE; r++){
@@ -325,7 +362,7 @@ for(let r=0; r<SIZE; r++){
 
     const input = document.createElement("input");
     input.maxLength = 1;
-    input.type = "text";
+    input.inputMode = "numeric";
     
     if(initialBoard[r][c] !== 0){
       input.value = initialBoard[r][c];
@@ -333,7 +370,7 @@ for(let r=0; r<SIZE; r++){
       input.dataset.given = "1";
     } else {
       input.dataset.given = "0";
-      input.disabled = true; // start button enables it
+      input.disabled = true;
       input.addEventListener("input", (e) => onInput(r, c, e.target));
     }
     td.appendChild(input);
@@ -351,12 +388,22 @@ function redrawInputs(){
       } else {
           inp.value = workBoard[r][c] === 0 ? "" : workBoard[r][c];
       }
+      // Odśwież kolory jeśli jesteśmy w trybie instant
+      if(mode === "instant" && workBoard[r][c] !== 0) {
+          if(isValid(workBoard, r, c, workBoard[r][c])) {
+              inp.classList.add("ok"); inp.classList.remove("bad");
+          } else {
+              inp.classList.add("bad"); inp.classList.remove("ok");
+          }
+      } else {
+          inp.classList.remove("ok", "bad");
+      }
     }
   }
 }
 
 /* ------------------ CONTROLS ------------------ */
-let timerInt=null, started=false, mode="later";
+let started = false, mode = "later";
 
 start.onclick=()=>{
   if(started) return;
@@ -365,7 +412,7 @@ start.onclick=()=>{
   document.querySelectorAll("#board input").forEach(inp => {
     if(inp.dataset.given === "0") inp.disabled = false;
   });
-  toast("Powodzenia!");
+  randomToast(["Powodzenia!", "Zaczynamy!", "Skupienie to klucz!"]);
 };
 
 function onInput(r, c, input){
@@ -393,69 +440,91 @@ function checkFinished(){
     for(let c=0; c<SIZE; c++){
       if(workBoard[r][c] === 0 || !isValid(workBoard, r, c, workBoard[r][c])) return;
     }
-  openModal("Gratulacje!", "Sudoku 9x9 rozwiązane pomyślnie!");
+  beep(1400);
+  openModal("Gratulacje!", "Sudoku 9x9 zostało rozwiązane poprawnie!");
 }
 
-/* ------------------ OTHER FUNCTIONS ------------------ */
-modeInstant.onclick=()=> { mode="instant"; toast("Tryb natychmiastowy"); };
-modeLater.onclick=()=> { mode="later"; toast("Tryb sprawdzania na końcu"); };
-
-removeConflictsBtn.onclick=()=>{
-  for(let r=0; r<SIZE; r++)
-    for(let c=0; c<SIZE; c++)
-      if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0){
-        if(!isValid(workBoard, r, c, workBoard[r][c])){
-          workBoard[r][c] = 0;
+/* ------------------ HINTS ------------------ */
+function giveHint() {
+    removeConflicts(true); // Automatyczna naprawa przed podpowiedzią
+    
+    const empty = [];
+    for(let r=0; r<SIZE; r++)
+        for(let c=0; c<SIZE; c++) if(workBoard[r][c] === 0) empty.push({r,c});
+    
+    if(empty.length === 0) return false;
+    
+    const {r,c} = empty[Math.floor(Math.random()*empty.length)];
+    // W tej wersji beta szukamy poprawnej cyfry (uproszczone)
+    for(let v=1; v<=9; v++){
+        if(isValid(workBoard, r, c, v)){
+            workBoard[r][c] = v;
+            const inp = table.rows[r].cells[c].firstChild;
+            inp.value = v;
+            inp.classList.add("ok");
+            return true;
         }
-      }
-  redrawInputs();
-  toast("Konflikty usunięte");
-};
-
-resetColorsBtn.onclick=()=>{
-  document.querySelectorAll("#board input").forEach(i => i.classList.remove("ok", "bad"));
-};
+    }
+    return false;
+}
 
 hint.onclick=()=>{
-  const empty = [];
-  for(let r=0; r<SIZE; r++)
-    for(let c=0; c<SIZE; c++) if(workBoard[r][c]===0) empty.push({r,c});
-  
-  if(empty.length > 0){
-    const {r,c} = empty[Math.floor(Math.random()*empty.length)];
-    // Uproszczona podpowiedź: szuka pierwszej pasującej cyfry
-    for(let v=1; v<=9; v++){
-      if(isValid(workBoard, r, c, v)){
-        workBoard[r][c] = v;
-        redrawInputs();
-        break;
-      }
-    }
+  if(!started) return toast("Najpierw naciśnij Rozpocznij");
+  if(giveHint()) {
+      beep(1100);
+      toast("Dodano podpowiedź");
+  } else {
+      toast("Brak wolnych pól lub brak logicznych podpowiedzi");
   }
 };
 
-// Zoom
-let z = 1;
-zoomIn.onclick=()=>{ z+=0.1; boardWrap.style.transform=`scale(${z})`; };
-zoomOut.onclick=()=>{ z-=0.1; boardWrap.style.transform=`scale(${z})`; };
-zoomReset.onclick=()=>{ z=1; boardWrap.style.transform=`scale(1)`; };
+hint10.onclick=()=>{
+  if(!started) return toast("Najpierw naciśnij Rozpocznij");
+  let added = 0;
+  for(let i=0; i<10; i++) {
+      if(giveHint()) added++;
+  }
+  if(added > 0) {
+      beep(1100);
+      toast("Dodano " + added + " podpowiedzi");
+      checkFinished();
+  }
+};
 
-// Audio
-let soundEnabled=true;
-sound.onclick=()=>{ soundEnabled=!soundEnabled; sound.textContent=soundEnabled?"Dźwięk: wł.":"Dźwięk: wył."; };
-function beep(f){
-  if(!soundEnabled) return;
-  const a = new (window.AudioContext||window.webkitAudioContext)();
-  const o = a.createOscillator();
-  const g = a.createGain();
-  o.frequency.value=f; o.connect(g); g.connect(a.destination);
-  o.start(); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+0.2);
-}
+/* ------------------ OTHER ------------------ */
+modeInstant.onclick=()=> { mode="instant"; redrawInputs(); toast("Tryb: sprawdzaj od razu"); };
+modeLater.onclick=()=> { mode="later"; redrawInputs(); toast("Tryb: najpierw rozwiąż"); };
+removeConflictsBtn.onclick=()=> removeConflicts();
+resetColorsBtn.onclick=()=>{
+  document.querySelectorAll("#board input").forEach(i => i.classList.remove("ok", "bad"));
+  toast("Zresetowano kolory");
+};
 
 save.onclick=()=>{
   localStorage.setItem(BOARD_KEY, JSON.stringify(workBoard));
-  toast("Zapisano stan gry!");
+  localStorage.setItem(BOARD_KEY + "_date", new Date().toISOString());
+  beep(800);
+  toast("Stan gry został zapisany!");
 };
+
+// Zoom & Sound
+let z = 1;
+zoomIn.onclick=()=>{ z+=0.1; boardWrap.style.transform=`scale(${z})`; };
+zoomOut.onclick=()=>{ if(z>0.4) z-=0.1; boardWrap.style.transform=`scale(${z})`; };
+zoomReset.onclick=()=>{ z=1; boardWrap.style.transform=`scale(1)`; };
+
+let soundEnabled=true;
+sound.onclick=()=>{ soundEnabled=!soundEnabled; sound.textContent=soundEnabled?"Dźwięk: włączony":"Dźwięk: wyłączony"; };
+function beep(f){
+  if(!soundEnabled) return;
+  try {
+    const a = new (window.AudioContext||window.webkitAudioContext)();
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.frequency.value=f; o.connect(g); g.connect(a.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+0.2);
+  } catch(e) {}
+}
 </script>
 </body>
 </html>
