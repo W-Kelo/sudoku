@@ -3135,14 +3135,16 @@ function spinWheel() {
   const btn = document.getElementById('spin-btn');
   if(btn) btn.disabled = true;
 
-  // 1. Losujemy siłę początkową (wpływa na dystans)
-  cnSpinAngleStart = (Math.random() * 15) + 30; 
+  // Losujemy, ile PEŁNYCH obrotów ma zrobić koło (np. 5-10)
+  const extraRevolutions = Math.floor(Math.random() * 5) + 5;
+  // Losujemy końcowy kąt (0-360 stopni)
+  const randomFinalAngle = Math.random() * 360;
+  
+  // Obliczamy całkowity dystans do pokonania w stopniach
+  cnSpinAngleStart = (extraRevolutions * 360) + randomFinalAngle;
   
   cnSpinTime = 0;
-  
-  // 2. Losujemy czas trwania (wpływa na to, jak długo trwa animacja)
-  // Teraz będzie to od 3 do 6 sekund
-  cnSpinTimeTotal = (Math.random() * 3000) + 3000; 
+  cnSpinTimeTotal = (Math.random() * 2000) + 4000; // 4-6 sekund
   
   rotateWheel();
 }
@@ -3153,8 +3155,16 @@ function rotateWheel() {
     stopRotateWheel();
     return;
   }
-  let spinAngle = cnSpinAngleStart - easeOut(cnSpinTime, 0, cnSpinAngleStart, cnSpinTimeTotal);
-  cnStartAngle += (spinAngle * Math.PI / 180);
+
+  // Obliczamy postęp (od 0 do 1)
+  let progress = cnSpinTime / cnSpinTimeTotal;
+  // Używamy funkcji easeOut, aby wyhamować pod koniec
+  let easing = easeOut(cnSpinTime, 0, 1, cnSpinTimeTotal);
+  
+  // Aktualny kąt to: kąt startowy + (całkowity dystans * easing)
+  // Musisz zapisać cnBaseAngle na początku spinWheel jako aktualny cnStartAngle
+  cnStartAngle = cnBaseAngle + (cnSpinAngleStart * Math.PI / 180 * easing);
+
   drawWheel();
   cnSpinTimeout = setTimeout(rotateWheel, 30);
 }
