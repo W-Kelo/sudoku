@@ -187,10 +187,9 @@ input.bad{background:var(--bad);}
 /* ------------ ELEMENTY MOBILNE ------------ */
 #mobileMenuBtn { display: none; }
 #mobileMenuBackdrop { display: none; }
-#mobileBottomBar { display: none; } /* Ukryty pasek na PC */
+#mobileBottomBar { display: none; } 
 
 @media(max-width:900px){
-  /* Górny przycisk menu (hamburger / krzyżyk) */
   #mobileMenuBtn {
     display: flex;
     position: fixed;
@@ -254,7 +253,6 @@ input.bad{background:var(--bad);}
     margin: 0; 
   }
 
-  /* NOWOŚĆ: Dolny pasek nawigacyjny w stylu aplikacji */
   #mobileBottomBar {
     display: flex;
     position: fixed;
@@ -265,14 +263,14 @@ input.bad{background:var(--bad);}
     box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
     z-index: 1000;
     justify-content: space-around;
-    padding-bottom: env(safe-area-inset-bottom, 0); /* Bezpieczny margines dla iPhone */
+    padding-bottom: env(safe-area-inset-bottom, 0); 
     border-top: 1px solid #eaeaea;
   }
 
   #mobileBottomBar button {
     background: transparent;
     color: #666;
-    flex-direction: column; /* Ikona nad tekstem */
+    flex-direction: column; 
     gap: 4px;
     font-size: 11px;
     margin: 0;
@@ -300,7 +298,6 @@ input.bad{background:var(--bad);}
 
 <canvas id="bgAnim"></canvas>
 
-<!-- Top Przycisk Menu na Telefonie -->
 <button id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
 <div id="mobileMenuBackdrop"></div>
 
@@ -319,7 +316,7 @@ input.bad{background:var(--bad);}
     <div class="tool-group">
       <button id="hint"><i class="fas fa-lightbulb"></i> Podpowiedź</button>
       <button id="hint10"><i class="fas fa-magic"></i> Podpowiedź 10</button>
-      <button id="removeConflictsBtn"><i class="fas fa-eraser"></i> Usuń konflikty</button>
+      <button id="removeConflictsBtn"><i class="fas fa-eraser"></i> Przegrupuj konflikty</button>
       <button id="resetColorsBtn"><i class="fas fa-palette"></i> Zresetuj kolory</button>
     </div>
     <div class="tool-group">
@@ -343,11 +340,10 @@ input.bad{background:var(--bad);}
   </div>
 </div>
 
-<!-- NOWOŚĆ: Mobilny Pasek Narzędzi na Dole -->
 <div id="mobileBottomBar">
   <button id="mBtnStart"><i class="fas fa-play"></i><span>Start</span></button>
   <button id="mBtnHint"><i class="fas fa-lightbulb"></i><span>Podpowiedź</span></button>
-  <button id="mBtnRemove"><i class="fas fa-eraser"></i><span>Usuń błędy</span></button>
+  <button id="mBtnRemove"><i class="fas fa-eraser"></i><span>Przegrupuj</span></button>
   <button id="mBtnSave"><i class="fas fa-save"></i><span>Zapisz</span></button>
 </div>
 
@@ -455,7 +451,33 @@ const BOARD_KEY = "sudoku9_state_" + (raw ? btoa(raw).substring(0,16) : "default
     };
 })();
 
-/* ------------------ LOGIC ------------------ */
+/* ------------------ AI SOLVER (NOWOŚĆ) ------------------ */
+// Rozwiązuje planszę w ułamku sekundy, byśmy mieli "wzorzec" do przegrupowywania liczb
+let masterSolution = null;
+
+function generateMasterSolution() {
+    masterSolution = JSON.parse(JSON.stringify(initialBoard));
+    solveSudoku(masterSolution);
+}
+
+function solveSudoku(board) {
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            if (board[r][c] === 0) {
+                for (let n = 1; n <= 9; n++) {
+                    if (isValid(board, r, c, n)) {
+                        board[r][c] = n;
+                        if (solveSudoku(board)) return true;
+                        board[r][c] = 0;
+                    }
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 function isValid(board, r, c, val) {
   if (val === 0) return true;
   for (let i = 0; i < SIZE; i++) {
@@ -474,41 +496,64 @@ function isValid(board, r, c, val) {
 }
 
 /* 
-   SUPER PRECYZYJNE USUWANIE KONFLIKTÓW
-   Skanuje na bieżąco calutką tablicę pod kątem zasad Sudoku.
-   Uwzględnia pomyłki gracza ORAZ wszelkie wstawione podpowiedzi. 
-   Jeśli jakakolwiek liczba zderza się z inną, a nie jest zdefiniowana w oryginalnej
-   początkowej planszy (co obejmuje i wpisy klawiatury i podpowiedzi) - zostanie wymazana.
+   INTELIGENTNE PRZEGRUPOWANIE KONFLIKTÓW
+   Nie usuwa ilości liczb, tylko je "naprawia" i przesuwa na właściwe miejsca.
 */
 function removeConflicts(silent = false) {
-    let toRemove = [];
+    if(!masterSolution) generateMasterSolution();
 
+    let wrongCells = [];
+    
+    // Skanujemy planszę szukając błędnych liczb (według rozwiązania ostatecznego)
     for(let r=0; r<SIZE; r++) {
         for(let c=0; c<SIZE; c++) {
-            // Analizujemy tylko pola, których nie było na start (czyli wpisy usera ORAZ podpowiedzi!)
             if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
-                if(!isValid(workBoard, r, c, workBoard[r][c])) {
-                    toRemove.push({r, c});
+                if(workBoard[r][c] !== masterSolution[r][c]) {
+                    wrongCells.push({r, c});
                 }
             }
         }
     }
 
-    // Usunięcie wszystkich niepasujących danych z planszy naraz
-    for (let cell of toRemove) {
-        workBoard[cell.r][cell.c] = 0;
-    }
+    let relocatedCount = wrongCells.length;
 
-    if(toRemove.length > 0) redrawInputs();
+    if(relocatedCount > 0) {
+        // Krok 1: Kasujemy błędne miejsca
+        for(let cell of wrongCells) {
+            workBoard[cell.r][cell.c] = 0;
+        }
+
+        // Krok 2: Znajdujemy wolne, zdatne miejsca
+        let emptySpots = [];
+        for(let r=0; r<SIZE; r++) {
+            for(let c=0; c<SIZE; c++) {
+                if(workBoard[r][c] === 0) {
+                    emptySpots.push({r, c});
+                }
+            }
+        }
+
+        // Losujemy kolejność, by rozrzucić naprawione liczby losowo
+        emptySpots.sort(() => Math.random() - 0.5);
+
+        // Krok 3: Wstawiamy dokładnie taką samą ilość liczb z powrotem, ale POPRAWNYCH!
+        for(let i=0; i<relocatedCount; i++) {
+            let spot = emptySpots[i];
+            workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
+        }
+
+        redrawInputs();
+    }
     
     if(!silent) {
-        if (toRemove.length > 0) {
-            toast("Usunięto konflikty: " + toRemove.length);
+        if (relocatedCount > 0) {
+            toast("Przegrupowano i naprawiono: " + relocatedCount + " wpisów!");
+            beep(800);
         } else {
-            toast("Brak konfliktów!"); 
+            toast("Plansza jest w 100% spójna!"); 
         }
     }
-    return toRemove.length;
+    return relocatedCount;
 }
 
 /* ------------------ TABLE GENERATION ------------------ */
@@ -567,6 +612,7 @@ let started = false, mode = "later";
 start.onclick=()=>{
   if(started) return;
   started=true;
+  if(!masterSolution) generateMasterSolution(); // Start AI w tle
   boardOverlay.classList.add("hidden");
   document.querySelectorAll("#board input").forEach(inp => {
     if(inp.dataset.given === "0") inp.disabled = false;
@@ -605,34 +651,41 @@ function checkFinished(){
 
 /* ------------------ HINTS ------------------ */
 function giveHint() {
+    if(!masterSolution) generateMasterSolution();
+    
+    // Zawsze wymusza organizację przed dodaniem, gwarantując spójność
     removeConflicts(true); 
     
-    const empty = [];
-    for(let r=0; r<SIZE; r++)
-        for(let c=0; c<SIZE; c++) if(workBoard[r][c] === 0) empty.push({r,c});
-    
-    if(empty.length === 0) return false;
-    
-    const {r,c} = empty[Math.floor(Math.random()*empty.length)];
-    for(let v=1; v<=9; v++){
-        if(isValid(workBoard, r, c, v)){
-            workBoard[r][c] = v;
-            const inp = table.rows[r].cells[c].firstChild;
-            inp.value = v;
-            inp.classList.add("ok");
-            return true;
+    let emptySpots = [];
+    for(let r=0; r<SIZE; r++) {
+        for(let c=0; c<SIZE; c++) {
+            if(workBoard[r][c] === 0) emptySpots.push({r, c});
         }
     }
-    return false;
+
+    if(emptySpots.length === 0) return false;
+
+    // Losujemy punkt i wymuszamy idealnie pasującą liczbę z Master Solution
+    let spot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+    workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
+
+    redrawInputs();
+    
+    // Graficzne zaznaczenie nowej podpowiedzi (dla lepszego User Experience)
+    const inp = table.rows[spot.r].cells[spot.c].firstChild;
+    inp.classList.add("ok");
+
+    return true;
 }
 
 hint.onclick=()=>{
   if(!started) return toast("Najpierw naciśnij Rozpocznij");
   if(giveHint()) {
       beep(1100);
-      toast("Dodano podpowiedź");
+      toast("Wymuszono podpowiedź i przegrupowano planszę");
+      checkFinished();
   } else {
-      toast("Brak wolnych pól lub logicznych podpowiedzi");
+      toast("Plansza jest już pełna!");
   }
 };
 
@@ -644,7 +697,7 @@ hint10.onclick=()=>{
   }
   if(added > 0) {
       beep(1100);
-      toast("Dodano " + added + " podpowiedzi");
+      toast("Dodano " + added + " podpowiedzi i uporządkowano grę");
       checkFinished();
   }
 };
@@ -707,12 +760,9 @@ const toolsPanel = document.getElementById('tools');
 const menuBackdrop = document.getElementById('mobileMenuBackdrop');
 const boardWrap = document.getElementById('boardWrap');
 
-// Toggle dla przycisku Hamburger Menu (Otwórz / Zamknij)
 mobileMenuBtn.onclick = () => {
     const isOpen = toolsPanel.classList.toggle('open');
     menuBackdrop.classList.toggle('open');
-    
-    // Zmiana ikony po rozwinięciu / zwinięciu menu
     if (isOpen) {
         mobileMenuBtn.innerHTML = '<i class="fas fa-times"></i>';
     } else {
@@ -726,7 +776,6 @@ menuBackdrop.onclick = () => {
     mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
 };
 
-// Logika przycisków dolnego paska (wywołują kliknięcie bocznych opcji)
 document.getElementById('mBtnStart').onclick = () => document.getElementById('start').click();
 document.getElementById('mBtnHint').onclick = () => document.getElementById('hint').click();
 document.getElementById('mBtnRemove').onclick = () => document.getElementById('removeConflictsBtn').click();
@@ -745,13 +794,10 @@ function adjustResponsiveBoard() {
     
     const col = document.getElementById('boardCol');
     const availableWidth = col.clientWidth - 20; 
-    // Odejmujemy więcej miejsca od góry i OD DOŁU, aby ominąć nowy dolny pasek zadań (~65px góra, ~65px dół)
     const availableHeight = col.clientHeight - 130; 
 
     const boardSize = table.offsetWidth || 405; 
-    
     const baseScale = Math.min(availableWidth / boardSize, availableHeight / boardSize);
-    
     boardWrap.style.transform = `scale(${baseScale * mobileZ})`;
 }
 
