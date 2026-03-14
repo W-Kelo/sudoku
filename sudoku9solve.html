@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Sudoku 9x9 – Rozwiązywanie</title>
+
+<style>
+:root{
+  --bg:#eef1f7;
+  --fg:#111;
+  --overlay:rgba(255,255,255,.83);
+  --ok:#c8facc;
+  --bad:#ffd6d6;
+}
+
+body{
+  margin:0;
+  font-family: Arial,Helvetica,sans-serif;
+  color:var(--fg);
+  background:var(--bg);
+  height:100vh;
+  display:flex;
+}
+
+#layout{
+  display:grid;
+  width:100%;
+  height:100%;
+  grid-template-columns:280px 1fr;
+}
+
+#tools{
+  border-right:1px solid #ccc;
+  padding:12px;
+  overflow-y:auto;
+}
+
+.tool-group{
+  border-bottom:1px solid #ddd;
+  padding-bottom:8px;
+  margin-bottom:12px;
+}
+
+button{
+  width:100%;
+  border:none;
+  padding:8px 10px;
+  background:#007bff;
+  color:white;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:4px;
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+#boardCol{
+  position:relative;
+  overflow:auto;
+}
+
+#boardWrap{
+  transform-origin:top left;
+  transition:transform .15s ease;
+  display:inline-block;
+}
+
+#boardOverlay{
+  pointer-events:none;
+  position:absolute;
+  inset:0;
+  backdrop-filter:blur(7px);
+  background:var(--overlay);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:22px;
+  font-weight:bold;
+  z-index:3;
+}
+
+#boardOverlay.hidden{
+  display:none;
+}
+
+table{
+  border-collapse:collapse;
+  margin:26px;
+  background:white;
+}
+
+td{
+  width:45px;
+  height:45px;
+  border:1px solid #777;
+  position:relative;
+}
+
+/* Grube linie dla Sudoku 9x9 (co 3 komórki) */
+.bold-r{border-right:3px solid #000;}
+.bold-b{border-bottom:3px solid #000;}
+
+input{
+  width:100%;
+  height:100%;
+  border:none;
+  text-align:center;
+  font-size:22px;
+  font-weight:bold;
+  background:transparent;
+}
+
+input.ok{background:var(--ok);}
+input.bad{background:var(--bad);}
+
+#toasts{
+  position:fixed;
+  right:15px;
+  bottom:15px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  z-index:40;
+}
+
+.toast{
+  padding:9px 12px;
+  border-radius:9px;
+  background:#222;
+  color:white;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+
+#modalOverlay, #loadSaveModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:50;
+}
+
+.modalBox{
+  background:white;
+  border-radius:14px;
+  padding:18px 20px;
+  max-width:420px;
+  text-align:center;
+}
+
+#bgAnim{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+}
+
+@media(max-width:900px){
+  #layout{
+    grid-template-columns:1fr;
+    grid-template-rows:auto 1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bgAnim"></canvas>
+
+<div id="layout">
+  <div id="tools">
+    <h2>Narzędzia 9x9</h2>
+    <div class="tool-group">
+      <button id="start">Rozpocznij</button>
+      <button id="stop" style="display: none;">Stop czasu</button>
+      <div id="timer" style="display: none;">00:00</div>
+    </div>
+    <div class="tool-group">
+      <button id="modeInstant">Tryb: sprawdzaj od razu</button>
+      <button id="modeLater">Tryb: najpierw rozwiąż</button>
+    </div>
+    <div class="tool-group">
+      <button id="hint">Podpowiedź</button>
+      <button id="removeConflictsBtn">Usuń konflikty</button>
+      <button id="resetColorsBtn">Zresetuj kolory</button>
+    </div>
+    <div class="tool-group">
+      <button id="zoomIn">Powiększ</button>
+      <button id="zoomOut">Pomniejsz</button>
+      <button id="zoomReset">Reset zoom</button>
+    </div>
+    <div class="tool-group">
+      <button id="save">Zapisz stan gry</button>
+    </div>
+    <div class="tool-group">
+      <button id="sound">Dźwięk: włączony</button>
+    </div>
+  </div>
+
+  <div id="boardCol">
+    <div id="boardOverlay">Naciśnij „Rozpocznij”, aby uruchomić grę.</div>
+    <div id="boardWrap">
+      <table id="board"></table>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<div id="modalOverlay">
+  <div class="modalBox">
+    <h3 id="modalTitle"></h3>
+    <p id="modalText"></p>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+
+<div id="loadSaveModal">
+  <div class="modalBox">
+    <h3>Znaleziono zapisany stan</h3>
+    <p id="loadSaveText"></p>
+    <button id="btnLoadSave">Załaduj</button>
+    <button onclick="closeLoadSave()">Anuluj</button>
+  </div>
+</div>
+
+<script>
+/* ------------------ CONFIG ------------------ */
+const SIZE = 9;
+const SUB_SIZE = 3;
+
+/* ------------------ UTILS ------------------ */
+function toast(text){
+  const t=document.createElement("div");
+  t.className="toast";
+  t.textContent=text;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(()=>t.remove(),2800);
+}
+
+function randomToast(arr){
+  toast(arr[Math.floor(Math.random()*arr.length)]);
+}
+
+function openModal(t,x){
+  modalTitle.textContent=t;
+  modalText.textContent=x;
+  modalOverlay.style.display="flex";
+}
+
+function closeModal(){
+  modalOverlay.style.display="none";
+}
+
+/* ------------------ BACKGROUND ------------------ */
+const cvs=document.getElementById("bgAnim");
+const ctx=cvs.getContext("2d");
+function resizeCanvas(){ cvs.width=innerWidth; cvs.height=innerHeight; }
+resizeCanvas();
+addEventListener("resize",resizeCanvas);
+const bubbles=[...Array(20)].map(()=>({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight, r:20+Math.random()*40, s:0.3+Math.random()*0.6
+}));
+(function animBg(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  bubbles.forEach(b=>{
+    ctx.fillStyle="rgba(120,160,255,.16)";
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    b.y-=b.s; if(b.y<-50) b.y=innerHeight+50;
+  });
+  requestAnimationFrame(animBg);
+})();
+
+/* ------------------ DATA ------------------ */
+function get(name){ return new URLSearchParams(location.search).get(name); }
+const raw = get("board");
+let initialBoard;
+
+try {
+    if(raw) {
+        initialBoard = JSON.parse(decodeURIComponent(raw));
+    } else {
+        // Przykładowa tablica jeśli brak danych w URL
+        initialBoard = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
+    }
+} catch(e) {
+    initialBoard = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
+}
+
+const workBoard = JSON.parse(JSON.stringify(initialBoard));
+const BOARD_KEY = "sudoku9_state_" + (raw || "default");
+
+/* ------------------ LOGIC ------------------ */
+function isValid(board, r, c, val) {
+  if (val === 0) return true;
+  for (let i = 0; i < SIZE; i++) {
+    if (board[r][i] === val && i !== c) return false;
+    if (board[i][c] === val && i !== r) return false;
+  }
+  const br = Math.floor(r / SUB_SIZE) * SUB_SIZE;
+  const bc = Math.floor(c / SUB_SIZE) * SUB_SIZE;
+  for (let i = 0; i < SUB_SIZE; i++) {
+    for (let j = 0; j < SUB_SIZE; j++) {
+      const rr = br + i, cc = bc + j;
+      if (board[rr][cc] === val && !(rr === r && cc === c)) return false;
+    }
+  }
+  return true;
+}
+
+/* ------------------ TABLE GENERATION ------------------ */
+const table = document.getElementById("board");
+for(let r=0; r<SIZE; r++){
+  const tr = document.createElement("tr");
+  for(let c=0; c<SIZE; c++){
+    const td = document.createElement("td");
+    if((c+1) % SUB_SIZE === 0 && c < SIZE-1) td.classList.add("bold-r");
+    if((r+1) % SUB_SIZE === 0 && r < SIZE-1) td.classList.add("bold-b");
+
+    const input = document.createElement("input");
+    input.maxLength = 1;
+    input.type = "text";
+    
+    if(initialBoard[r][c] !== 0){
+      input.value = initialBoard[r][c];
+      input.disabled = true;
+      input.dataset.given = "1";
+    } else {
+      input.dataset.given = "0";
+      input.disabled = true; // start button enables it
+      input.addEventListener("input", (e) => onInput(r, c, e.target));
+    }
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+
+function redrawInputs(){
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      const inp = table.rows[r].cells[c].firstChild;
+      if(initialBoard[r][c] !== 0) {
+          inp.value = initialBoard[r][c];
+      } else {
+          inp.value = workBoard[r][c] === 0 ? "" : workBoard[r][c];
+      }
+    }
+  }
+}
+
+/* ------------------ CONTROLS ------------------ */
+let timerInt=null, started=false, mode="later";
+
+start.onclick=()=>{
+  if(started) return;
+  started=true;
+  boardOverlay.classList.add("hidden");
+  document.querySelectorAll("#board input").forEach(inp => {
+    if(inp.dataset.given === "0") inp.disabled = false;
+  });
+  toast("Powodzenia!");
+};
+
+function onInput(r, c, input){
+  let v = input.value.replace(/[^1-9]/g, "");
+  input.value = v;
+  const num = v === "" ? 0 : parseInt(v);
+  workBoard[r][c] = num;
+
+  if(mode === "instant" && num !== 0){
+    if(isValid(workBoard, r, c, num)){
+      input.classList.add("ok"); input.classList.remove("bad");
+      beep(950);
+    } else {
+      input.classList.add("bad"); input.classList.remove("ok");
+      beep(200);
+    }
+  } else {
+    input.classList.remove("ok", "bad");
+  }
+  checkFinished();
+}
+
+function checkFinished(){
+  for(let r=0; r<SIZE; r++)
+    for(let c=0; c<SIZE; c++){
+      if(workBoard[r][c] === 0 || !isValid(workBoard, r, c, workBoard[r][c])) return;
+    }
+  openModal("Gratulacje!", "Sudoku 9x9 rozwiązane pomyślnie!");
+}
+
+/* ------------------ OTHER FUNCTIONS ------------------ */
+modeInstant.onclick=()=> { mode="instant"; toast("Tryb natychmiastowy"); };
+modeLater.onclick=()=> { mode="later"; toast("Tryb sprawdzania na końcu"); };
+
+removeConflictsBtn.onclick=()=>{
+  for(let r=0; r<SIZE; r++)
+    for(let c=0; c<SIZE; c++)
+      if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0){
+        if(!isValid(workBoard, r, c, workBoard[r][c])){
+          workBoard[r][c] = 0;
+        }
+      }
+  redrawInputs();
+  toast("Konflikty usunięte");
+};
+
+resetColorsBtn.onclick=()=>{
+  document.querySelectorAll("#board input").forEach(i => i.classList.remove("ok", "bad"));
+};
+
+hint.onclick=()=>{
+  const empty = [];
+  for(let r=0; r<SIZE; r++)
+    for(let c=0; c<SIZE; c++) if(workBoard[r][c]===0) empty.push({r,c});
+  
+  if(empty.length > 0){
+    const {r,c} = empty[Math.floor(Math.random()*empty.length)];
+    // Uproszczona podpowiedź: szuka pierwszej pasującej cyfry
+    for(let v=1; v<=9; v++){
+      if(isValid(workBoard, r, c, v)){
+        workBoard[r][c] = v;
+        redrawInputs();
+        break;
+      }
+    }
+  }
+};
+
+// Zoom
+let z = 1;
+zoomIn.onclick=()=>{ z+=0.1; boardWrap.style.transform=`scale(${z})`; };
+zoomOut.onclick=()=>{ z-=0.1; boardWrap.style.transform=`scale(${z})`; };
+zoomReset.onclick=()=>{ z=1; boardWrap.style.transform=`scale(1)`; };
+
+// Audio
+let soundEnabled=true;
+sound.onclick=()=>{ soundEnabled=!soundEnabled; sound.textContent=soundEnabled?"Dźwięk: wł.":"Dźwięk: wył."; };
+function beep(f){
+  if(!soundEnabled) return;
+  const a = new (window.AudioContext||window.webkitAudioContext)();
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.frequency.value=f; o.connect(g); g.connect(a.destination);
+  o.start(); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+0.2);
+}
+
+save.onclick=()=>{
+  localStorage.setItem(BOARD_KEY, JSON.stringify(workBoard));
+  toast("Zapisano stan gry!");
+};
+</script>
+</body>
+</html>
