@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<!-- TA LINIJKA JEST KLUCZOWA DLA URZĄDZEŃ MOBILNYCH -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -186,15 +185,12 @@ input.bad{background:var(--bad);}
 }
 
 /* ------------ ELEMENTY MOBILNE ------------ */
-#mobileMenuBtn {
-  display: none; 
-}
-
-#mobileMenuBackdrop {
-  display: none;
-}
+#mobileMenuBtn { display: none; }
+#mobileMenuBackdrop { display: none; }
+#mobileBottomBar { display: none; } /* Ukryty pasek na PC */
 
 @media(max-width:900px){
+  /* Górny przycisk menu (hamburger / krzyżyk) */
   #mobileMenuBtn {
     display: flex;
     position: fixed;
@@ -257,6 +253,45 @@ input.bad{background:var(--bad);}
   table {
     margin: 0; 
   }
+
+  /* NOWOŚĆ: Dolny pasek nawigacyjny w stylu aplikacji */
+  #mobileBottomBar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+    z-index: 1000;
+    justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom, 0); /* Bezpieczny margines dla iPhone */
+    border-top: 1px solid #eaeaea;
+  }
+
+  #mobileBottomBar button {
+    background: transparent;
+    color: #666;
+    flex-direction: column; /* Ikona nad tekstem */
+    gap: 4px;
+    font-size: 11px;
+    margin: 0;
+    padding: 10px 0;
+    width: auto;
+    flex: 1;
+    border-radius: 0;
+  }
+
+  #mobileBottomBar button i {
+    font-size: 22px;
+    margin-bottom: 2px;
+  }
+
+  #mobileBottomBar button:active {
+    color: #007bff;
+    transform: none;
+    background: rgba(0, 123, 255, 0.05);
+  }
 }
 </style>
 </head>
@@ -265,6 +300,7 @@ input.bad{background:var(--bad);}
 
 <canvas id="bgAnim"></canvas>
 
+<!-- Top Przycisk Menu na Telefonie -->
 <button id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
 <div id="mobileMenuBackdrop"></div>
 
@@ -305,6 +341,14 @@ input.bad{background:var(--bad);}
       <table id="board"></table>
     </div>
   </div>
+</div>
+
+<!-- NOWOŚĆ: Mobilny Pasek Narzędzi na Dole -->
+<div id="mobileBottomBar">
+  <button id="mBtnStart"><i class="fas fa-play"></i><span>Start</span></button>
+  <button id="mBtnHint"><i class="fas fa-lightbulb"></i><span>Podpowiedź</span></button>
+  <button id="mBtnRemove"><i class="fas fa-eraser"></i><span>Usuń błędy</span></button>
+  <button id="mBtnSave"><i class="fas fa-save"></i><span>Zapisz</span></button>
 </div>
 
 <div id="toasts"></div>
@@ -430,18 +474,19 @@ function isValid(board, r, c, val) {
 }
 
 /* 
-   POPRAWIONE USUWANIE KONFLIKTÓW - "Na żywo" i sprawiedliwie.
-   Skanuje najpierw CAŁĄ planszę w poszukiwaniu winnych komórek, 
-   a dopiero POTEM usuwa wszystkie błędne wpisy usera naraz.
+   SUPER PRECYZYJNE USUWANIE KONFLIKTÓW
+   Skanuje na bieżąco calutką tablicę pod kątem zasad Sudoku.
+   Uwzględnia pomyłki gracza ORAZ wszelkie wstawione podpowiedzi. 
+   Jeśli jakakolwiek liczba zderza się z inną, a nie jest zdefiniowana w oryginalnej
+   początkowej planszy (co obejmuje i wpisy klawiatury i podpowiedzi) - zostanie wymazana.
 */
 function removeConflicts(silent = false) {
     let toRemove = [];
 
-    // Krok 1: Znajdź wszystkie komórki wpisane przez usera, które z czymś kolidują
     for(let r=0; r<SIZE; r++) {
         for(let c=0; c<SIZE; c++) {
+            // Analizujemy tylko pola, których nie było na start (czyli wpisy usera ORAZ podpowiedzi!)
             if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
-                // Jeśli wpisana liczba koliduje z czymkolwiek na obecnej planszy
                 if(!isValid(workBoard, r, c, workBoard[r][c])) {
                     toRemove.push({r, c});
                 }
@@ -449,7 +494,7 @@ function removeConflicts(silent = false) {
         }
     }
 
-    // Krok 2: Usuń natychmiast wszystkie zaznaczone komórki, wprowadzając porządek
+    // Usunięcie wszystkich niepasujących danych z planszy naraz
     for (let cell of toRemove) {
         workBoard[cell.r][cell.c] = 0;
     }
@@ -662,15 +707,30 @@ const toolsPanel = document.getElementById('tools');
 const menuBackdrop = document.getElementById('mobileMenuBackdrop');
 const boardWrap = document.getElementById('boardWrap');
 
+// Toggle dla przycisku Hamburger Menu (Otwórz / Zamknij)
 mobileMenuBtn.onclick = () => {
-    toolsPanel.classList.add('open');
-    menuBackdrop.classList.add('open');
+    const isOpen = toolsPanel.classList.toggle('open');
+    menuBackdrop.classList.toggle('open');
+    
+    // Zmiana ikony po rozwinięciu / zwinięciu menu
+    if (isOpen) {
+        mobileMenuBtn.innerHTML = '<i class="fas fa-times"></i>';
+    } else {
+        mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+    }
 };
 
 menuBackdrop.onclick = () => {
     toolsPanel.classList.remove('open');
     menuBackdrop.classList.remove('open');
+    mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
 };
+
+// Logika przycisków dolnego paska (wywołują kliknięcie bocznych opcji)
+document.getElementById('mBtnStart').onclick = () => document.getElementById('start').click();
+document.getElementById('mBtnHint').onclick = () => document.getElementById('hint').click();
+document.getElementById('mBtnRemove').onclick = () => document.getElementById('removeConflictsBtn').click();
+document.getElementById('mBtnSave').onclick = () => document.getElementById('save').click();
 
 function adjustResponsiveBoard() {
     if(window.innerWidth > 900) {
@@ -685,7 +745,8 @@ function adjustResponsiveBoard() {
     
     const col = document.getElementById('boardCol');
     const availableWidth = col.clientWidth - 20; 
-    const availableHeight = col.clientHeight - 80; 
+    // Odejmujemy więcej miejsca od góry i OD DOŁU, aby ominąć nowy dolny pasek zadań (~65px góra, ~65px dół)
+    const availableHeight = col.clientHeight - 130; 
 
     const boardSize = table.offsetWidth || 405; 
     
