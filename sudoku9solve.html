@@ -2,8 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<!-- TA LINIJKA JEST KLUCZOWA DLA URZĄDZEŃ MOBILNYCH -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="icon" type="image/png" href="favicon.png">
-<!-- Dodano bibliotekę ikon FontAwesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <title>Sudoku 9x9 – Rozwiązywanie</title>
 
@@ -23,7 +24,7 @@ body{
   background:var(--bg);
   height:100vh;
   display:flex;
-  overflow: hidden; /* Dodano by zapobiec niepotrzebnym paskom na mobile */
+  overflow: hidden; 
 }
 
 #layout{
@@ -37,7 +38,7 @@ body{
   border-right:1px solid #ccc;
   padding:12px;
   overflow-y:auto;
-  background: var(--bg); /* Ważne dla wysuwanego menu na mobile */
+  background: var(--bg);
 }
 
 .tool-group{
@@ -55,7 +56,6 @@ button{
   border-radius:8px;
   cursor:pointer;
   margin-top:4px;
-  /* Dodano lepsze ułożenie tekstu i ikon */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,7 +79,6 @@ button:disabled{
 #boardCol{
   position:relative;
   overflow:auto;
-  /* Dodano dla poprawnego centrowania planszy przy mniejszym zoomie */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -115,7 +114,7 @@ table{
   border-collapse:collapse;
   margin:26px;
   background:white;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Delikatny nowoczesny cień planszy */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
 }
 
 td{
@@ -186,16 +185,15 @@ input.bad{background:var(--bad);}
   pointer-events:none;
 }
 
-/* ------------ ELEMENTY MOBILNE (NOWE) ------------ */
+/* ------------ ELEMENTY MOBILNE ------------ */
 #mobileMenuBtn {
-  display: none; /* Ukryte na komputerach */
+  display: none; 
 }
 
 #mobileMenuBackdrop {
   display: none;
 }
 
-/* Wersja Responsywna - Zoptymalizowana i upiększona */
 @media(max-width:900px){
   #mobileMenuBtn {
     display: flex;
@@ -232,14 +230,14 @@ input.bad{background:var(--bad);}
   }
 
   #layout{
-    display: flex; /* Zmieniamy na flex by wypozycjonować planszę idealnie */
+    display: flex; 
     flex-direction: column;
   }
   
   #tools{
     position: fixed;
     top: 0;
-    left: -320px; /* Menu wysuwane (Off-Canvas) */
+    left: -320px; 
     width: 280px;
     height: 100vh;
     z-index: 999;
@@ -253,11 +251,11 @@ input.bad{background:var(--bad);}
 
   #boardCol {
     flex: 1;
-    overflow: hidden; /* Ważne, by JS mógł idealnie dopasować skalę bez scrollbarów */
+    overflow: hidden; 
   }
 
   table {
-    margin: 0; /* Usuwamy marginesy, aby algorytm wypełniania działał w 100% poprawnie */
+    margin: 0; 
   }
 }
 </style>
@@ -267,14 +265,12 @@ input.bad{background:var(--bad);}
 
 <canvas id="bgAnim"></canvas>
 
-<!-- Nowe elementy dedykowane na telefon -->
 <button id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
 <div id="mobileMenuBackdrop"></div>
 
 <div id="layout">
   <div id="tools">
     <h2>Narzędzia 9x9</h2>
-    <!-- Dodano precyzyjnie dobrane ikony do każdego przycisku -->
     <div class="tool-group">
       <button id="start"><i class="fas fa-play"></i> Rozpocznij</button>
       <button id="stop" style="display: none;"><i class="fas fa-stop"></i> Stop czasu</button>
@@ -434,51 +430,40 @@ function isValid(board, r, c, val) {
 }
 
 /* 
-   Maksymalnie usprawniona funkcja removeConflicts (Złożoność zredukowana do O(N^2)).
-   Zamiast wywoływać 'isValid' w pętli, tworzymy mapę wystąpień i jednym optymalnym przejściem
-   oznaczamy jako usunięte wszelkie komórki użytkownika łamiące zasady Sudoku. 
+   POPRAWIONE USUWANIE KONFLIKTÓW - "Na żywo" i sprawiedliwie.
+   Skanuje najpierw CAŁĄ planszę w poszukiwaniu winnych komórek, 
+   a dopiero POTEM usuwa wszystkie błędne wpisy usera naraz.
 */
 function removeConflicts(silent = false) {
-    let count = 0;
-    
-    // Tablice pomocnicze liczące występowanie cyfr 1-9
-    const rowsMap = Array.from({length: SIZE}, () => Array(10).fill(0));
-    const colsMap = Array.from({length: SIZE}, () => Array(10).fill(0));
-    const blocksMap = Array.from({length: SIZE}, () => Array(10).fill(0));
+    let toRemove = [];
 
-    // Krok 1: Przelicz każdą wartość na planszy
+    // Krok 1: Znajdź wszystkie komórki wpisane przez usera, które z czymś kolidują
     for(let r=0; r<SIZE; r++) {
         for(let c=0; c<SIZE; c++) {
-            const val = workBoard[r][c];
-            if(val !== 0) {
-                const b = Math.floor(r / SUB_SIZE) * SUB_SIZE + Math.floor(c / SUB_SIZE);
-                rowsMap[r][val]++;
-                colsMap[c][val]++;
-                blocksMap[b][val]++;
-            }
-        }
-    }
-
-    // Krok 2: Usuń pomyłki użytkownika na podstawie przeliczonych map
-    for(let r=0; r<SIZE; r++) {
-        for(let c=0; c<SIZE; c++) {
-            const val = workBoard[r][c];
-            // Interesują nas tylko pola wpisane przez usera
-            if(initialBoard[r][c] === 0 && val !== 0) {
-                const b = Math.floor(r / SUB_SIZE) * SUB_SIZE + Math.floor(c / SUB_SIZE);
-                // Jeśli dana cyfra występuje więcej niż 1 raz w linii, kolumnie lub kwadracie - mamy konflikt
-                if(rowsMap[r][val] > 1 || colsMap[c][val] > 1 || blocksMap[b][val] > 1) {
-                    workBoard[r][c] = 0;
-                    count++;
+            if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
+                // Jeśli wpisana liczba koliduje z czymkolwiek na obecnej planszy
+                if(!isValid(workBoard, r, c, workBoard[r][c])) {
+                    toRemove.push({r, c});
                 }
             }
         }
     }
 
-    if(count > 0) redrawInputs();
-    if(!silent && count > 0) toast("Usunięto konflikty: " + count);
-    if(!silent && count === 0) toast("Brak konfliktów!"); // Usprawnienie UX
-    return count;
+    // Krok 2: Usuń natychmiast wszystkie zaznaczone komórki, wprowadzając porządek
+    for (let cell of toRemove) {
+        workBoard[cell.r][cell.c] = 0;
+    }
+
+    if(toRemove.length > 0) redrawInputs();
+    
+    if(!silent) {
+        if (toRemove.length > 0) {
+            toast("Usunięto konflikty: " + toRemove.length);
+        } else {
+            toast("Brak konfliktów!"); 
+        }
+    }
+    return toRemove.length;
 }
 
 /* ------------------ TABLE GENERATION ------------------ */
@@ -635,9 +620,9 @@ save.onclick=()=>{
   toast("Stan gry został zapisany!");
 };
 
-// Zoptymalizowany Zoom (Współpracuje ze skalowaniem mobilnym)
-let z = 1; // zoom na komputerze
-let mobileZ = 1; // modyfikator zoomu na telefonie
+// Zoptymalizowany Zoom
+let z = 1; 
+let mobileZ = 1; 
 
 zoomIn.onclick=()=>{ 
     if(window.innerWidth > 900) z+=0.1; else mobileZ+=0.1;
@@ -655,7 +640,6 @@ zoomReset.onclick=()=>{
 let soundEnabled=true;
 sound.onclick=()=>{ 
     soundEnabled=!soundEnabled; 
-    // Zachowujemy ikonę i aktualizujemy tekst
     sound.innerHTML = soundEnabled 
         ? '<i class="fas fa-volume-up"></i> Dźwięk: włączony' 
         : '<i class="fas fa-volume-mute"></i> Dźwięk: wyłączony'; 
@@ -672,13 +656,12 @@ function beep(f){
   } catch(e) {}
 }
 
-/* ------------ NOWE FUNKCJE DLA WERSJI RESPONSYWNEJ ------------ */
+/* ------------ LOGIKA MENU MOBILNEGO ------------ */
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const toolsPanel = document.getElementById('tools');
 const menuBackdrop = document.getElementById('mobileMenuBackdrop');
 const boardWrap = document.getElementById('boardWrap');
 
-// Obsługa wysuwanego menu Off-Canvas
 mobileMenuBtn.onclick = () => {
     toolsPanel.classList.add('open');
     menuBackdrop.classList.add('open');
@@ -689,36 +672,29 @@ menuBackdrop.onclick = () => {
     menuBackdrop.classList.remove('open');
 };
 
-// Automatyczne wypełnianie maksymalnej przestrzeni na smartfonach
 function adjustResponsiveBoard() {
     if(window.innerWidth > 900) {
-        // Wersja komputerowa (zostawiamy oryginalne zachowanie)
         boardWrap.style.transformOrigin = "top left";
         boardWrap.style.transform = `scale(${z})`;
         table.style.margin = "26px";
         return;
     }
     
-    // Wersja mobilna - dynamiczne i idealne centrowanie oraz skalowanie!
     boardWrap.style.transformOrigin = "center center";
     table.style.margin = "0"; 
     
     const col = document.getElementById('boardCol');
-    const availableWidth = col.clientWidth - 20; // 10px bezpiecznego marginesu
-    const availableHeight = col.clientHeight - 80; // miejsce na przycisk menu z góry
+    const availableWidth = col.clientWidth - 20; 
+    const availableHeight = col.clientHeight - 80; 
 
-    const boardSize = table.offsetWidth || 405; // 9 * 45px 
+    const boardSize = table.offsetWidth || 405; 
     
-    // Ustalamy bazową skalę by plansza perfekcyjnie wpasowała się w ekran telefonu
     const baseScale = Math.min(availableWidth / boardSize, availableHeight / boardSize);
     
-    // Mnożymy to przez mobileZ jeśli user jednak użył manualnego powiększenia
     boardWrap.style.transform = `scale(${baseScale * mobileZ})`;
 }
 
-// Podpinamy nasłuchiwacze skalowania okna
 window.addEventListener('resize', adjustResponsiveBoard);
-// Wymuszamy pierwsze wyliczenie zaraz po zbudowaniu tabeli
 setTimeout(adjustResponsiveBoard, 0);
 
 </script>
