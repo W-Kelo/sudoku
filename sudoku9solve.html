@@ -241,7 +241,10 @@ input.bad{background:var(--bad);}
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 20px rgba(0,0,0,0.3);
   }
-  
+  #tools h2 {
+    text-align: right;
+    margin-right: 10px; /* Opcjonalnie: lekki odstęp od krawędzi */
+  }
   #tools.open {
     left: 0;
   }
@@ -367,7 +370,7 @@ input.bad{background:var(--bad);}
 
 <div id="layout">
   <div id="tools">
-    <h2>Narzędzia 9x9</h2>
+    <h2>Narzędzia</h2>
     <div class="tool-group">
       <button id="start"><i class="fas fa-play"></i> Rozpocznij</button>
       <button id="stop" style="display: none;"><i class="fas fa-stop"></i> Stop czasu</button>
