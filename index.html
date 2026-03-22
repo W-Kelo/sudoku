@@ -997,21 +997,16 @@ function onSuccess(data) {
     urls = matches ? matches : ["#"];
   }
   
-  // 3. WAŻNE: Najpierw zapisz dane do zmiennej globalnej
   currentData = { 
     urls: urls,
-    displayItems: [] // zostanie wypełnione w initWheel
+    displayItems: [] 
   };
 
   // 4. Pobierz typ z GAS i wywołaj router
   const pType = data.prizeType || 'fortuna'; 
-  
-  // Małe opóźnienie (50ms), aby przeglądarka zdążyła "wyrenderować" kontener
-  // dzięki temu Koło Fortuny i Sudoku 4x4 zawsze wystartują poprawnie.
   setTimeout(() => {
     routeViewCn(pType);
   }, 50);
-}
     } else if (typeRaw === "wbudowana-sonda-rozmiaru-planszy") {
       activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
       showOnlySection(activeSection);
