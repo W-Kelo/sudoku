@@ -976,37 +976,30 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudokusm89-info");
       showOnlySection(activeSection);
       setCommon("sudokusm89-origin", "sudokusm89-link", data.origin, data.notes);
-   // } else if (typeRaw === "sudoku16" || typeRaw === "16" || typeRaw === "16x16") {
-    //  activeSection = document.getElementById("sudoku16-info");
-    //  showOnlySection(activeSection);
-    //  setCommon("sudoku16-origin", "sudoku16-link", data.origin, data.notes);
     } else if (typeRaw === "sudoku10" || typeRaw === "10" || typeRaw === "10x10") {
       activeSection = document.getElementById("sudoku10-info");
       showOnlySection(activeSection);
       setCommon("sudoku10-origin", "sudoku10-link", data.origin, data.notes);
-   } else if (typeRaw === "konkurs") {
-  // 1. Znajdź sekcję i użyj Twojego helpera showOnlySection
-  activeSection = document.getElementById("konkurs-info");
-  showOnlySection(activeSection);
+    } else if (typeRaw === "konkurs") {
+      activeSection = document.getElementById("konkurs-info");
+      showOnlySection(activeSection);
 
-  // 2. Pobierz URL-e
-  let urls = data.urls || [];
-  if (!urls.length && data.notes) {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const matches = data.notes.match(urlRegex);
-    urls = matches ? matches : ["#"];
-  }
-  
-  currentData = { 
-    urls: urls,
-    displayItems: [] 
-  };
+      let urls = data.urls || [];
+      if (!urls.length && data.notes) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const matches = data.notes.match(urlRegex);
+        urls = matches ? matches : ["#"];
+      }
+      
+      currentData = { 
+        urls: urls,
+        displayItems: [] 
+      };
 
-  // 4. Pobierz typ z GAS i wywołaj router
-  const pType = data.prizeType || 'fortuna'; 
-  setTimeout(() => {
-    routeViewCn(pType);
-  }, 50);
+      const pType = data.prizeType || 'fortuna'; 
+      setTimeout(() => {
+        routeViewCn(pType);
+      }, 50);
     } else if (typeRaw === "wbudowana-sonda-rozmiaru-planszy") {
       activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
       showOnlySection(activeSection);
