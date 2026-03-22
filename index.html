@@ -980,26 +980,38 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudoku10-info");
       showOnlySection(activeSection);
       setCommon("sudoku10-origin", "sudoku10-link", data.origin, data.notes);
-    } else if (typeRaw === "konkurs") {
-      activeSection = document.getElementById("konkurs-info");
-      showOnlySection(activeSection);
+   } else if (typeRaw === "konkurs") {
+  // 1. Znajdź sekcję
+  activeSection = document.getElementById("konkurs-info");
+  
+  // 2. WYMUSZAMY widoczność (nadpisujemy RESET)
+  if (activeSection) {
+    activeSection.hidden = false;
+    activeSection.style.setProperty('display', 'block', 'important');
+    activeSection.style.setProperty('visibility', 'visible', 'important');
+    activeSection.style.opacity = "1";
+  }
 
-      let urls = data.urls || [];
-      if (!urls.length && data.notes) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const matches = data.notes.match(urlRegex);
-        urls = matches ? matches : ["#"];
-      }
-      
-      currentData = { 
-        urls: urls,
-        displayItems: [] 
-      };
+  // 3. Pobierz URL-e
+  let urls = data.urls || [];
+  if (!urls.length && data.notes) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const matches = data.notes.match(urlRegex);
+    urls = matches ? matches : ["#"];
+  }
+  
+  currentData = { 
+    urls: urls,
+    displayItems: [] 
+  };
 
-      const pType = data.prizeType || 'fortuna'; 
-      setTimeout(() => {
-        routeViewCn(pType);
-      }, 50);
+  const pType = data.prizeType || 'fortuna'; 
+  
+  // 4. Router - zwiększamy nieco timeout do 100ms, by DOM na pewno "odpuścił" poprzednie style
+  setTimeout(() => {
+    routeViewCn(pType);
+  }, 100);
+
     } else if (typeRaw === "wbudowana-sonda-rozmiaru-planszy") {
       activeSection = document.getElementById("wbudowana-sonda-rozmiaru-planszy-info");
       showOnlySection(activeSection);
@@ -3105,25 +3117,28 @@ function enableRatingButtons(section) {
     }
   }
 function routeViewCn(type) {
-  // Wymuś widoczność kontenera nadrzędnego, inaczej Canvas (koło) będzie miało rozmiar 0x0
   const parent = document.getElementById('konkurs-info');
   if (parent) {
     parent.style.display = 'block';
     parent.style.visibility = 'visible';
   }
 
-  document.getElementById('view-fortune').style.display = 'none';
-  document.getElementById('view-sudoku-cn').style.display = 'none';
-  document.getElementById('view-win').style.display = 'none';
+  // Ukrywamy pod-widoki
+  const vFortune = document.getElementById('view-fortune');
+  const vSudoku = document.getElementById('view-sudoku-cn');
+  const vWin = document.getElementById('view-win');
+
+  if(vFortune) vFortune.style.display = 'none';
+  if(vSudoku) vSudoku.style.display = 'none';
+  if(vWin) vWin.style.display = 'none';
 
   if (type === 'fortuna') {
-    document.getElementById('view-fortune').style.display = 'block';
-    // Reset zmiennych kąta przed startem
+    if(vFortune) vFortune.style.display = 'block';
     cnStartAngle = 0; 
     initWheel();
   } else if (type === 'sudoku') {
-    document.getElementById('view-sudoku-cn').style.display = 'block';
-    initSudokuCn();
+    if(vSudoku) vSudoku.style.display = 'block';
+    initSudokuCn(); // To wygeneruje tabelkę 4x4
   } else {
     let url = currentData && currentData.urls && currentData.urls.length > 0 ? currentData.urls[0] : '#';
     showWinCn(url);
@@ -3132,15 +3147,19 @@ function routeViewCn(type) {
 
 function initWheel() {
   const canvas = document.getElementById("canvas");
+  if (!canvas) return; // Zabezpieczenie
   cnCtx = canvas.getContext("2d");
   
-  // Zapewniamy min. 4 pola do narysowania proporcjonalnego koła
+  // To ważne: jeśli currentData.urls jest puste, koło nie ma co rysować
+  if (!currentData.urls || currentData.urls.length === 0) {
+      currentData.urls = ["#"];
+  }
+
   currentData.displayItems = currentData.urls.length > 3 ? currentData.urls : [
-    currentData.urls[0], currentData.urls[0] || "#", currentData.urls[0] || "#", currentData.urls[0] || "#"
+    currentData.urls[0], currentData.urls[0], currentData.urls[0], currentData.urls[0]
   ];
 
   cnArc = Math.PI / (currentData.displayItems.length / 2);
-  document.getElementById('spin-btn').disabled = false;
   drawWheel();
 }
 
