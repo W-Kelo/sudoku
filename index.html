@@ -3281,13 +3281,31 @@ function checkSudokuCn() {
 }
 
 function showWinCn(url) {
-  // Wymuszenie widoczności głównego kontenera nagród
-  document.getElementById('konkurs-info').style.display = 'block'; 
+  // 1. Najpierw wymuszamy widoczność głównych kontenerów
+  const konkursInfo = document.getElementById('konkurs-info');
+  const viewWin = document.getElementById('view-win');
 
-  document.getElementById('view-fortune').style.display = 'none';
-  document.getElementById('view-sudoku-cn').style.display = 'none';
-  document.getElementById('view-win').style.display = 'block';
-  document.getElementById('prize-button').href = url;
+  if (konkursInfo) konkursInfo.style.display = 'block';
+  
+  // 2. Ukrywamy poprzednie etapy (koło/sudoku)
+  const fortune = document.getElementById('view-fortune');
+  const sudoku = document.getElementById('view-sudoku-cn');
+  if (fortune) fortune.style.display = 'none';
+  if (sudoku) sudoku.style.display = 'none';
+
+  // 3. Pokazujemy widok wygranej
+  if (viewWin) {
+    viewWin.style.display = 'block';
+  }
+
+  // 4. BEZPIECZNE ustawienie linku (to tutaj miałeś błąd na fotce)
+  const prizeBtn = document.getElementById('prize-button');
+  if (prizeBtn) {
+    prizeBtn.href = url;
+    prizeBtn.style.display = 'inline-block'; // Dodatkowe upewnienie się, że przycisk jest widoczny
+  } else {
+    console.error("Nie znaleziono elementu #prize-button! Sprawdź czy id w HTML jest poprawne.");
+  }
 }
 
 </script>
