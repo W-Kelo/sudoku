@@ -3281,6 +3281,9 @@ function checkSudokuCn() {
 }
 
 function showWinCn(url) {
+  // Wymuszenie widoczności głównego kontenera nagród
+  document.getElementById('konkurs-info').style.display = 'block'; 
+
   document.getElementById('view-fortune').style.display = 'none';
   document.getElementById('view-sudoku-cn').style.display = 'none';
   document.getElementById('view-win').style.display = 'block';
