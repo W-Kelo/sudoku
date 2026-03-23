@@ -1618,6 +1618,34 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
     });
     table.appendChild(tr);
   });
+      if (!isSolution && containerId === "initial-sudoku-table") {
+  addSolveButton4(board);
+}
+    function addSolveButton4(board) {
+
+ // if (!isDesktop()) return;
+
+  const container = document.getElementById("sudoku-container");
+  if (!container) return;
+
+  const old = document.getElementById("solve9btn");
+  if (old) old.remove();
+
+  const btn = document.createElement("button");
+  btn.id = "solve4btn";
+  btn.className = "open-new-tab-btn-2";
+  btn.textContent = "Rozwiąż w nowej karcie, wersja beta";
+
+  btn.onclick = () => {
+    const url =
+      "sudoku4solve.html?board=" + encodeURIComponent(JSON.stringify(board));
+    window.open(url, "_blank");
+  };
+
+  // tylko pod NIERozwiązaną
+  document
+    .getElementById("initial-sudoku-table")
+    .insertAdjacentElement("afterend", btn);
 }
   function renderSudoku6(boardString, containerId, isSolution=false) {
     clear18Artifacts();
