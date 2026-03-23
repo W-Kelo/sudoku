@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>Sudoku 4x4 – Rozwiązywanie</title>
+
+<style>
+:root{
+  --bg:#eef1f7;
+  --fg:#111;
+  --overlay:rgba(255,255,255,.83);
+  --ok:#c8facc;
+  --bad:#ffd6d6;
+}
+
+body{
+  margin:0;
+  font-family: Arial,Helvetica,sans-serif;
+  color:var(--fg);
+  background:var(--bg);
+  height:100vh;
+  display:flex;
+  overflow: hidden; 
+}
+
+#layout{
+  display:grid;
+  width:100%;
+  height:100%;
+  grid-template-columns:280px 1fr;
+}
+
+#tools{
+  border-right:1px solid #ccc;
+  padding:12px;
+  overflow-y:auto;
+  background: var(--bg);
+}
+
+.tool-group{
+  border-bottom:1px solid #ddd;
+  padding-bottom:8px;
+  margin-bottom:12px;
+}
+
+button{
+  width:100%;
+  border:none;
+  padding:8px 10px;
+  background:#007bff;
+  color:white;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+#boardCol{
+  position:relative;
+  overflow:auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#boardWrap{
+  transform-origin:top left;
+  transition:transform .15s ease;
+  display:inline-block;
+}
+
+#boardOverlay{
+  pointer-events:none;
+  position:absolute;
+  inset:0;
+  backdrop-filter:blur(7px);
+  background:var(--overlay);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:22px;
+  font-weight:bold;
+  z-index:3;
+  text-align: center;
+  padding: 20px;
+}
+
+#boardOverlay.hidden{
+  display:none;
+}
+
+table{
+  border-collapse:collapse;
+  margin:26px;
+  background:white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+}
+
+td{
+  width:60px; /* Nieco większe komórki dla 4x4 */
+  height:60px;
+  border:1px solid #777;
+  position:relative;
+}
+
+.bold-r{border-right:4px solid #000;}
+.bold-b{border-bottom:4px solid #000;}
+
+input{
+  width:100%;
+  height:100%;
+  border:none;
+  text-align:center;
+  font-size:28px;
+  font-weight:bold;
+  background:transparent;
+}
+
+input.ok{background:var(--ok);}
+input.bad{background:var(--bad);}
+
+#toasts{
+  position:fixed;
+  right:15px;
+  bottom:15px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  z-index:40;
+}
+
+.toast{
+  padding:9px 12px;
+  border-radius:9px;
+  background:#222;
+  color:white;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+
+#modalOverlay, #loadSaveModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:50;
+  backdrop-filter: blur(4px);
+}
+
+.modalBox{
+  background:white;
+  border-radius:14px;
+  padding:18px 20px;
+  max-width:420px;
+  text-align:center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+#bgAnim{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+}
+
+/* ------------ ELEMENTY MOBILNE ------------ */
+#mobileMenuBtn { display: none; }
+#mobileMenuBackdrop { display: none; }
+#mobileBottomBar { display: none; } 
+#mobileTicker { display: none; }
+
+@media(max-width:900px){
+  #mobileMenuBtn {
+    display: flex;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    z-index: 1000;
+    background: #007bff;
+    color: white;
+    font-size: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: none;
+    cursor: pointer;
+  }
+  
+  #mobileMenuBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  #mobileMenuBackdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #layout{
+    display: flex; 
+    flex-direction: column;
+  }
+  
+  #tools{
+    position: fixed;
+    top: 0;
+    left: -320px; 
+    width: 280px;
+    height: 100vh;
+    z-index: 999;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+  }
+  #tools h2 { text-align: right; margin-right: 10px; }
+  #tools.open { left: 0; }
+
+  #boardCol { flex: 1; overflow: hidden; }
+  table { margin: 0; }
+  #toasts { display: none !important; }
+
+  #mobileBottomBar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 64px;
+    background: #ffffff;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+    z-index: 1000;
+    justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom, 0); 
+    border-top: 1px solid #eaeaea;
+  }
+
+  #mobileBottomBar button {
+    background: transparent;
+    color: #666;
+    flex-direction: column; 
+    gap: 4px;
+    font-size: 11px;
+    margin: 0;
+    padding: 10px 0;
+    width: auto;
+    flex: 1;
+    border-radius: 0;
+  }
+
+  #mobileBottomBar button i { font-size: 22px; margin-bottom: 2px; }
+
+  #mobileTicker {
+    display: flex;
+    position: fixed;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    width: 100%;
+    height: 30px;
+    background: #222;
+    color: #fff;
+    z-index: 999;
+    align-items: center;
+  }
+
+  .ticker-label {
+    background: #007bff;
+    color: white;
+    padding: 0 10px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 2;
+    text-transform: uppercase;
+  }
+
+  .ticker-track { flex: 1; position: relative; height: 100%; overflow: hidden; }
+  .ticker-msg {
+    position: absolute;
+    white-space: nowrap;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    animation: scrollTicker 4.5s linear forwards;
+  }
+
+  @keyframes scrollTicker {
+    to { transform: translate(calc(-100vw - 100%), -50%); }
+  }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="bgAnim"></canvas>
+
+<button id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+<div id="mobileMenuBackdrop"></div>
+
+<div id="layout">
+  <div id="tools">
+    <h2>Narzędzia 4x4</h2>
+    <div class="tool-group">
+      <button id="start"><i class="fas fa-play"></i> Rozpocznij</button>
+      <div id="timer" style="display: none;">00:00</div>
+    </div>
+    <div class="tool-group">
+      <button id="modeInstant"><i class="fas fa-bolt"></i> Tryb: sprawdzaj od razu</button>
+      <button id="modeLater"><i class="fas fa-check-double"></i> Tryb: najpierw rozwiąż</button>
+    </div>
+    <div class="tool-group">
+      <button id="hint"><i class="fas fa-lightbulb"></i> Podpowiedź</button>
+      <button id="hintAll"><i class="fas fa-magic"></i> Wypełnij 4 pola</button>
+      <button id="removeConflictsBtn"><i class="fas fa-eraser"></i> Przegrupuj konflikty</button>
+      <button id="resetColorsBtn"><i class="fas fa-palette"></i> Zresetuj kolory</button>
+    </div>
+    <div class="tool-group">
+      <button id="zoomIn"><i class="fas fa-search-plus"></i> Powiększ</button>
+      <button id="zoomOut"><i class="fas fa-search-minus"></i> Pomniejsz</button>
+      <button id="zoomReset"><i class="fas fa-expand"></i> Reset zoom</button>
+    </div>
+    <div class="tool-group">
+      <button id="save"><i class="fas fa-save"></i> Zapisz stan gry</button>
+    </div>
+    <div class="tool-group">
+      <button id="sound"><i class="fas fa-volume-up"></i> Dźwięk: włączony</button>
+    </div>
+  </div>
+
+  <div id="boardCol">
+    <div id="boardOverlay">Naciśnij „Rozpocznij”, aby uruchomić grę 4x4.</div>
+    <div id="boardWrap">
+      <table id="board"></table>
+    </div>
+  </div>
+</div>
+
+<div id="mobileTicker">
+  <div class="ticker-label"><i class="fas fa-info-circle"></i> INFO</div>
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<div id="mobileBottomBar">
+  <button id="mBtnStart"><i class="fas fa-play"></i><span>Start</span></button>
+  <button id="mBtnHint"><i class="fas fa-lightbulb"></i><span>Podpowiedź</span></button>
+  <button id="mBtnRemove"><i class="fas fa-eraser"></i><span>Przegrupuj</span></button>
+  <button id="mBtnSave"><i class="fas fa-save"></i><span>Zapisz</span></button>
+</div>
+
+<div id="toasts"></div>
+
+<div id="modalOverlay">
+  <div class="modalBox">
+    <h3 id="modalTitle"></h3>
+    <p id="modalText"></p>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+
+<div id="loadSaveModal">
+  <div class="modalBox">
+    <h3>Znaleziono zapis 4x4</h3>
+    <p id="loadSaveText"></p>
+    <button id="btnLoadSave">Załaduj</button>
+    <button onclick="closeLoadSave()">Anuluj</button>
+  </div>
+</div>
+
+<script>
+/* ------------------ CONFIG 4x4 ------------------ */
+const SIZE = 4;
+const SUB_SIZE = 2;
+
+/* ------------------ UTILS ------------------ */
+function toast(text){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = text;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+
+  const track = document.getElementById("tickerTrack");
+  if(track) {
+      track.innerHTML = ""; 
+      const msg = document.createElement("div");
+      msg.className = "ticker-msg";
+      msg.textContent = text;
+      track.appendChild(msg);
+  }
+}
+
+function randomToast(arr){
+  toast(arr[Math.floor(Math.random()*arr.length)]);
+}
+
+function openModal(t,x){
+  modalTitle.textContent=t;
+  modalText.textContent=x;
+  modalOverlay.style.display="flex";
+}
+
+function closeModal(){ modalOverlay.style.display="none"; }
+function closeLoadSave(){ loadSaveModal.style.display="none"; }
+
+/* ------------------ BACKGROUND ------------------ */
+const cvs=document.getElementById("bgAnim");
+const ctx=cvs.getContext("2d");
+function resizeCanvas(){ cvs.width=innerWidth; cvs.height=innerHeight; }
+resizeCanvas();
+addEventListener("resize",resizeCanvas);
+const bubbles=[...Array(15)].map(()=>({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight, r:15+Math.random()*30, s:0.2+Math.random()*0.5
+}));
+(function animBg(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  bubbles.forEach(b=>{
+    ctx.fillStyle="rgba(120,160,255,.12)";
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+    b.y-=b.s; if(b.y<-50) b.y=innerHeight+50;
+  });
+  requestAnimationFrame(animBg);
+})();
+
+/* ------------------ DATA & SAVE SYSTEM ------------------ */
+function get(name){ return new URLSearchParams(location.search).get(name); }
+const raw = get("board");
+let initialBoard;
+
+// Domyślna plansza 4x4 jeśli nie podano w URL
+const default4x4 = [
+    [1, 0, 0, 4],
+    [0, 0, 1, 0],
+    [0, 2, 0, 0],
+    [3, 0, 0, 2]
+];
+
+try {
+    if(raw) {
+        initialBoard = JSON.parse(decodeURIComponent(raw));
+    } else {
+        initialBoard = default4x4;
+    }
+} catch(e) {
+    initialBoard = default4x4;
+}
+
+let workBoard = JSON.parse(JSON.stringify(initialBoard));
+const BOARD_KEY = "sudoku4_state_" + (raw ? btoa(raw).substring(0,8) : "default4x4");
+
+(function checkSavedGame(){
+    const savedData = localStorage.getItem(BOARD_KEY);
+    const savedDate = localStorage.getItem(BOARD_KEY + "_date");
+    if(!savedData) return;
+    loadSaveText.textContent = "Zapis z: " + (savedDate ? new Date(savedDate).toLocaleString() : "??");
+    loadSaveModal.style.display = "flex";
+    btnLoadSave.onclick = () => {
+        workBoard = JSON.parse(savedData);
+        redrawInputs();
+        closeLoadSave();
+        toast("Zapis 4x4 załadowany");
+    };
+})();
+
+/* ------------------ AI SOLVER ------------------ */
+let masterSolution = null;
+
+function generateMasterSolution() {
+    masterSolution = JSON.parse(JSON.stringify(initialBoard));
+    solveSudoku(masterSolution);
+}
+
+function solveSudoku(board) {
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            if (board[r][c] === 0) {
+                for (let n = 1; n <= SIZE; n++) {
+                    if (isValid(board, r, c, n)) {
+                        board[r][c] = n;
+                        if (solveSudoku(board)) return true;
+                        board[r][c] = 0;
+                    }
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function isValid(board, r, c, val) {
+  if (val === 0) return true;
+  for (let i = 0; i < SIZE; i++) {
+    if (board[r][i] === val && i !== c) return false;
+    if (board[i][c] === val && i !== r) return false;
+  }
+  const br = Math.floor(r / SUB_SIZE) * SUB_SIZE;
+  const bc = Math.floor(c / SUB_SIZE) * SUB_SIZE;
+  for (let i = 0; i < SUB_SIZE; i++) {
+    for (let j = 0; j < SUB_SIZE; j++) {
+      const rr = br + i, cc = bc + j;
+      if (board[rr][cc] === val && !(rr === r && cc === c)) return false;
+    }
+  }
+  return true;
+}
+
+/* ------------------ PRZEGRUPOWANIE ------------------ */
+function removeConflicts(silent = false) {
+    if(!masterSolution) generateMasterSolution();
+    let wrongCells = [];
+    for(let r=0; r<SIZE; r++) {
+        for(let c=0; c<SIZE; c++) {
+            if(initialBoard[r][c] === 0 && workBoard[r][c] !== 0) {
+                if(workBoard[r][c] !== masterSolution[r][c]) wrongCells.push({r, c});
+            }
+        }
+    }
+    let relocatedCount = wrongCells.length;
+    if(relocatedCount > 0) {
+        for(let cell of wrongCells) workBoard[cell.r][cell.c] = 0;
+        let emptySpots = [];
+        for(let r=0; r<SIZE; r++) {
+            for(let c=0; c<SIZE; c++) {
+                if(workBoard[r][c] === 0) emptySpots.push({r, c});
+            }
+        }
+        emptySpots.sort(() => Math.random() - 0.5);
+        for(let i=0; i<relocatedCount; i++) {
+            let spot = emptySpots[i];
+            workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
+        }
+        redrawInputs();
+    }
+    if(!silent) {
+        if (relocatedCount > 0) { toast("Naprawiono: " + relocatedCount + " pól!"); beep(800); }
+        else { toast("Wszystko jest OK!"); }
+    }
+}
+
+/* ------------------ GENEROWANIE TABELI ------------------ */
+const table = document.getElementById("board");
+for(let r=0; r<SIZE; r++){
+  const tr = document.createElement("tr");
+  for(let c=0; c<SIZE; c++){
+    const td = document.createElement("td");
+    if((c+1) % SUB_SIZE === 0 && c < SIZE-1) td.classList.add("bold-r");
+    if((r+1) % SUB_SIZE === 0 && r < SIZE-1) td.classList.add("bold-b");
+
+    const input = document.createElement("input");
+    input.maxLength = 1;
+    input.inputMode = "numeric";
+    
+    if(initialBoard[r][c] !== 0){
+      input.value = initialBoard[r][c];
+      input.disabled = true;
+      input.dataset.given = "1";
+    } else {
+      input.dataset.given = "0";
+      input.disabled = true;
+      input.addEventListener("input", (e) => onInput(r, c, e.target));
+    }
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+
+function redrawInputs(){
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      const inp = table.rows[r].cells[c].firstChild;
+      if(initialBoard[r][c] !== 0) {
+          inp.value = initialBoard[r][c];
+      } else {
+          inp.value = workBoard[r][c] === 0 ? "" : workBoard[r][c];
+      }
+      if(mode === "instant" && workBoard[r][c] !== 0) {
+          if(isValid(workBoard, r, c, workBoard[r][c])) {
+              inp.classList.add("ok"); inp.classList.remove("bad");
+          } else {
+              inp.classList.add("bad"); inp.classList.remove("ok");
+          }
+      } else {
+          inp.classList.remove("ok", "bad");
+      }
+    }
+  }
+}
+
+/* ------------------ CONTROLS ------------------ */
+let started = false, mode = "later";
+
+start.onclick=()=>{
+  if(started) return;
+  started=true;
+  if(!masterSolution) generateMasterSolution(); 
+  boardOverlay.classList.add("hidden");
+  document.querySelectorAll("#board input").forEach(inp => {
+    if(inp.dataset.given === "0") inp.disabled = false;
+  });
+  randomToast(["4x4 jest szybsze!", "Powodzenia!", "Do dzieła!"]);
+};
+
+function onInput(r, c, input){
+  let v = input.value.replace(/[^1-4]/g, ""); // Tylko 1-4
+  input.value = v;
+  const num = v === "" ? 0 : parseInt(v);
+  workBoard[r][c] = num;
+
+  if(mode === "instant" && num !== 0){
+    if(isValid(workBoard, r, c, num)){
+      input.classList.add("ok"); input.classList.remove("bad");
+      beep(950);
+    } else {
+      input.classList.add("bad"); input.classList.remove("ok");
+      beep(200);
+    }
+  } else {
+    input.classList.remove("ok", "bad");
+  }
+  checkFinished();
+}
+
+function checkFinished(){
+  for(let r=0; r<SIZE; r++)
+    for(let c=0; c<SIZE; c++){
+      if(workBoard[r][c] === 0 || !isValid(workBoard, r, c, workBoard[r][c])) return;
+    }
+  beep(1400);
+  openModal("Zwycięstwo!", "Sudoku 4x4 rozwiązane!");
+}
+
+/* ------------------ HINTS ------------------ */
+function giveHint() {
+    if(!masterSolution) generateMasterSolution();
+    removeConflicts(true); 
+    let emptySpots = [];
+    for(let r=0; r<SIZE; r++) {
+        for(let c=0; c<SIZE; c++) {
+            if(workBoard[r][c] === 0) emptySpots.push({r, c});
+        }
+    }
+    if(emptySpots.length === 0) return false;
+    let spot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+    workBoard[spot.r][spot.c] = masterSolution[spot.r][spot.c];
+    redrawInputs();
+    return true;
+}
+
+hint.onclick=()=>{
+  if(!started) return toast("Naciśnij Rozpocznij");
+  if(giveHint()) { beep(1100); toast("Podpowiedź dodana"); checkFinished(); }
+};
+
+hintAll.onclick=()=>{
+  if(!started) return toast("Naciśnij Rozpocznij");
+  for(let i=0; i<4; i++) giveHint();
+  beep(1100); toast("Dodano 4 pola"); checkFinished();
+};
+
+/* ------------------ INNE ------------------ */
+modeInstant.onclick=()=> { mode="instant"; redrawInputs(); toast("Tryb: sprawdzaj od razu"); };
+modeLater.onclick=()=> { mode="later"; redrawInputs(); toast("Tryb: najpierw rozwiąż"); };
+removeConflictsBtn.onclick=()=> removeConflicts();
+resetColorsBtn.onclick=()=>{
+  document.querySelectorAll("#board input").forEach(i => i.classList.remove("ok", "bad"));
+};
+
+save.onclick=()=>{
+  localStorage.setItem(BOARD_KEY, JSON.stringify(workBoard));
+  localStorage.setItem(BOARD_KEY + "_date", new Date().toISOString());
+  beep(800); toast("Zapisano!");
+};
+
+let z = 1, mobileZ = 1; 
+
+zoomIn.onclick=()=>{ if(window.innerWidth > 900) z+=0.1; else mobileZ+=0.1; adjustResponsiveBoard(); };
+zoomOut.onclick=()=>{ if(window.innerWidth > 900) { if(z>0.5) z-=0.1; } else { if(mobileZ>0.5) mobileZ-=0.1; } adjustResponsiveBoard(); };
+zoomReset.onclick=()=>{ z=1; mobileZ=1; adjustResponsiveBoard(); };
+
+let soundEnabled=true;
+sound.onclick=()=>{ 
+    soundEnabled=!soundEnabled; 
+    sound.innerHTML = soundEnabled ? '<i class="fas fa-volume-up"></i> Dźwięk: wł.' : '<i class="fas fa-volume-mute"></i> Dźwięk: wył.'; 
+};
+
+function beep(f){
+  if(!soundEnabled) return;
+  try {
+    const a = new (window.AudioContext||window.webkitAudioContext)();
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.frequency.value=f; o.connect(g); g.connect(a.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+0.2);
+  } catch(e) {}
+}
+
+/* ------------ MOBILE UI ------------ */
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const toolsPanel = document.getElementById('tools');
+const menuBackdrop = document.getElementById('mobileMenuBackdrop');
+const boardWrap = document.getElementById('boardWrap');
+
+mobileMenuBtn.onclick = () => {
+    const isOpen = toolsPanel.classList.toggle('open');
+    menuBackdrop.classList.toggle('open');
+    mobileMenuBtn.innerHTML = isOpen ? '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+};
+
+menuBackdrop.onclick = () => {
+    toolsPanel.classList.remove('open');
+    menuBackdrop.classList.remove('open');
+    mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+};
+
+document.getElementById('mBtnStart').onclick = () => document.getElementById('start').click();
+document.getElementById('mBtnHint').onclick = () => document.getElementById('hint').click();
+document.getElementById('mBtnRemove').onclick = () => document.getElementById('removeConflictsBtn').click();
+document.getElementById('mBtnSave').onclick = () => document.getElementById('save').click();
+
+function adjustResponsiveBoard() {
+    if(window.innerWidth > 900) {
+        boardWrap.style.transformOrigin = "top left";
+        boardWrap.style.transform = `scale(${z})`;
+        table.style.margin = "26px";
+        return;
+    }
+    boardWrap.style.transformOrigin = "center center";
+    table.style.margin = "0"; 
+    const col = document.getElementById('boardCol');
+    const availableWidth = col.clientWidth - 20; 
+    const availableHeight = col.clientHeight - 160; 
+    const boardSize = table.offsetWidth || 250; 
+    const baseScale = Math.min(availableWidth / boardSize, availableHeight / boardSize);
+    boardWrap.style.transform = `scale(${baseScale * mobileZ})`;
+}
+
+window.addEventListener('resize', adjustResponsiveBoard);
+setTimeout(adjustResponsiveBoard, 100);
+</script>
+</body>
+</html>
