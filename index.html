@@ -1593,7 +1593,7 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
       td.style.width = "25%";
       td.style.paddingTop = "25%";
       td.style.position = "relative";
-      td.style.border = "1px solid #888";
+      td.style.border = "1.5px solid #888";
       td.style.fontWeight = "bold";
       td.style.fontSize = "36px";
       const span = document.createElement("span");
@@ -1609,10 +1609,10 @@ function renderSudoku4(boardString, containerId, isSolution=false) {
 
       // pogrubione obramowania co 2 (blok 2x2)
       if ((colIndex + 1) % 2 === 0 && colIndex < 3) {
-        td.style.borderRight = "3px solid #000";
+        td.style.borderRight = "3.5px solid #000";
       }
       if ((rowIndex + 1) % 2 === 0 && rowIndex < 3) {
-        td.style.borderBottom = "3px solid #000";
+        td.style.borderBottom = "3.5px solid #000";
       }
       tr.appendChild(td);
     });
