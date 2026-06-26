@@ -440,16 +440,16 @@
   <div id="samurai-new-info" style="display: none; width: 100%;">
       <h2>Sudoku Samurajskie</h2>
       
-      <!-- Informacje (Pochodzenie, Trudność, Linki) -->
+      
+
+      <!-- Tutaj JS wygeneruje obrazki z mechanizmem powiększania (Lightbox) -->
+      <div id="samurai-images-container" style="display: flex; flex-direction: column; align-items: center; gap: 40px; margin-top: 20px;"></div>
+<!-- Informacje (Pochodzenie, Trudność, Linki) -->
       <div class="info-container" style="max-width: 600px; margin: 0 auto 20px auto; text-align: left;">
         <p><strong>Poziom trudności:</strong> <span id="samurai-new-difficulty"></span></p>
         <p><strong>Pochodzenie:</strong> <span id="samurai-new-origin"></span></p>
         <p><strong>Uwagi:</strong> <span id="samurai-new-notes"></span></p>
       </div>
-
-      <!-- Tutaj JS wygeneruje obrazki z mechanizmem powiększania (Lightbox) -->
-      <div id="samurai-images-container" style="display: flex; flex-direction: column; align-items: center; gap: 40px; margin-top: 20px;"></div>
-
       <div class="rating-container" style="display: none;">
         <h3>Oceń łamigłówkę:</h3>
         <div class="rating-section">
@@ -1024,8 +1024,8 @@ function onSuccess(data) {
 
       // Hiperłącza do sekcji "Uwagi"
       let linksHtml = "";
-      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px; text-decoration:none;">🔗 Otwórz nierozwiązaną</a>`;
-      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold; text-decoration:none;">🔗 Otwórz rozwiązaną</a>`;
+      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px; text-decoration:none;">Sudoku</a>`;
+      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
       document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków w bazie.";
 
       // Wyodrębnienie ID dysku, aby wczytać bezpośrednie zdjęcie (jak w 18x18)
