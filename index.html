@@ -1041,11 +1041,11 @@ function onSuccess(data) {
       let linksHtml = "";
       if (idUnsolved) {
         const downloadUrlUnsolved = `https://drive.google.com/uc?export=download&id=${idUnsolved}`;
-        linksHtml += `<a href="${downloadUrlUnsolved}" style="color:var(--primary-color); font-weight:bold; margin-right:5px; text-decoration:none;">Sudoku</a>,`;
+        linksHtml += `<a href="${downloadUrlUnsolved}">Sudoku</a>`;
       }
       if (idSolved) {
         const downloadUrlSolved = `https://drive.google.com/uc?export=download&id=${idSolved}`;
-        linksHtml += `<a href="${downloadUrlSolved}" style="color:var(--primary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
+        linksHtml += `<a href="${downloadUrlSolved}">Rozwiązanie</a>`;
       }
       
       document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak plików do pobrania.";
@@ -1063,7 +1063,7 @@ function onSuccess(data) {
         <!-- PLANSZA NIEROZWIĄZANA -->
         ${imgUnsolved ? `
         <div style="width: 100%; max-width: 500px; position: relative;">
-          <h3 style="color: var(--primary-color); margin-bottom: 10px;">Plansza nierozwiązana</h3>
+          <p>Plansza</p>
           <img src="${imgUnsolved}" alt="Samurai Nierozwiązane" 
                style="width: 100%; border-radius: 12px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; box-shadow: ${darkMode ? '0 18px 40px rgba(0,0,0,.75)' : '0 18px 40px rgba(0,0,0,.35)'}; cursor: zoom-in; ${darkMode ? 'filter: brightness(.9);' : ''}" 
                onclick="document.getElementById('zoom-samurai-unsolved').style.display='flex';">
@@ -1078,7 +1078,7 @@ function onSuccess(data) {
         <!-- PLANSZA ROZWIĄZANA -->
         ${imgSolved ? `
         <div style="width: 100%; max-width: 500px; position: relative;">
-          <h3 style="color: var(--secondary-color); margin-bottom: 10px;">Plansza rozwiązana</h3>
+          <p>Rozwiązanie</p>
           <img src="${imgSolved}" alt="Samurai Rozwiązanie" 
                style="width: 100%; border-radius: 12px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; box-shadow: ${darkMode ? '0 18px 40px rgba(0,0,0,.75)' : '0 18px 40px rgba(0,0,0,.35)'}; cursor: zoom-in; ${darkMode ? 'filter: brightness(.9);' : ''}" 
                onclick="document.getElementById('zoom-samurai-solved').style.display='flex';">
