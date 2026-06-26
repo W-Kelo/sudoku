@@ -437,27 +437,18 @@
   <p class="rating-message error-message"></p>
 </div>
     </div>
-    <div id="samurai-new-info" style="display: none; width: 100%;">
+  <div id="samurai-new-info" style="display: none; width: 100%;">
       <h2>Sudoku Samurajskie</h2>
-      <p>Wprowadzony kod dotyczy sudoku z zeszytu <span id="samurai-new-origin"></span>.</p>
       
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 30px; margin-top: 20px;">
-        <!-- Nierozwiązana -->
-        <div style="width: 100%; max-width: 600px;">
-          <h3 style="color: var(--primary-color); margin-bottom: 10px;">Plansza nierozwiązana</h3>
-          <img id="samurai-img-unsolved" src="" alt="Plansza nierozwiązana" style="width: 100%; border-radius: 12px; border: 1px solid #ccc; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
-        </div>
-        
-        <!-- Rozwiązana -->
-        <div style="width: 100%; max-width: 600px;">
-          <h3 style="color: var(--secondary-color); margin-bottom: 10px;">Plansza rozwiązana</h3>
-          <img id="samurai-img-solved" src="" alt="Plansza rozwiązana" style="width: 100%; border-radius: 12px; border: 1px solid #ccc; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
-        </div>
-      </div>
-
-      <div class="info-container" style="text-align: center; margin-top: 25px;">
+      <!-- Informacje (Pochodzenie, Trudność, Linki) -->
+      <div class="info-container" style="max-width: 600px; margin: 0 auto 20px auto; text-align: left;">
+        <p><strong>Poziom trudności:</strong> <span id="samurai-new-difficulty"></span></p>
+        <p><strong>Pochodzenie:</strong> <span id="samurai-new-origin"></span></p>
         <p><strong>Uwagi:</strong> <span id="samurai-new-notes"></span></p>
       </div>
+
+      <!-- Tutaj JS wygeneruje obrazki z mechanizmem powiększania (Lightbox) -->
+      <div id="samurai-images-container" style="display: flex; flex-direction: column; align-items: center; gap: 40px; margin-top: 20px;"></div>
 
       <div class="rating-container" style="display: none;">
         <h3>Oceń łamigłówkę:</h3>
@@ -1022,35 +1013,72 @@ function onSuccess(data) {
       activeSection = document.getElementById("samurai-new-info");
       showOnlySection(activeSection);
       
+      // Zapisaliśmy trudność w kolumnie B w bazie, co tutaj trafia do `data.code`
+      document.getElementById("samurai-new-difficulty").innerText = data.code || "Brak informacji";
       document.getElementById("samurai-new-origin").innerText = data.origin || "Brak informacji";
       
-      // Parsowanie linków z kolumny E rozdzielonych średnikiem
+      // Rozdzielenie linków dysku Google z kolumny Uwagi (E)
       const notesParts = (data.notes || "").split(";");
       const urlUnsolved = notesParts[0] ? notesParts[0].trim() : "";
       const urlSolved = notesParts.length > 1 ? notesParts[1].trim() : "";
 
-      // Funkcja zamieniająca standardowy link dysku na link do bezpośredniego podglądu obrazu (jak w 18x18)
+      // Hiperłącza do sekcji "Uwagi"
+      let linksHtml = "";
+      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px; text-decoration:none;">🔗 Otwórz nierozwiązaną</a>`;
+      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold; text-decoration:none;">🔗 Otwórz rozwiązaną</a>`;
+      document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków w bazie.";
+
+      // Wyodrębnienie ID dysku, aby wczytać bezpośrednie zdjęcie (jak w 18x18)
       function extractDriveImgUrl(url) {
         if (!url) return "";
         let fileId = null;
-        const patterns = [/\/d\/([^/]+)\//, /id=([^&]+)/, /\/d\/([^/?#]+)$/];
+        const patterns = [/\/d\/([^/]+)\//, /id=([^&]+)/, /\/d\/([^/?#]+)$/, /([A-Za-z0-9_-]{20,})/];
         for (const p of patterns) {
           const m = url.match(p);
           if (m && m[1]) { fileId = m[1]; break; }
         }
-        return fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : url;
+        return fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : "";
       }
 
-      // Ustawienie źródeł obrazów
-      document.getElementById("samurai-img-unsolved").src = extractDriveImgUrl(urlUnsolved);
-      document.getElementById("samurai-img-solved").src = extractDriveImgUrl(urlSolved);
+      const imgUnsolved = extractDriveImgUrl(urlUnsolved);
+      const imgSolved = extractDriveImgUrl(urlSolved);
 
-      // Budowanie linków dla sekcji "Uwagi"
-      let linksHtml = "";
-      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px;">🔗 Zobacz nierozwiązaną</a>`;
-      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold;">🔗 Zobacz rozwiązaną</a>`;
+      // Wykrywanie trybu ciemnego systemu dla estetyki Lightboxa (jak w 18x18)
+      const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       
-      document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków.";
+      // Wstrzykiwanie obrazów i okienek Lightbox do HTML
+      const imgContainer = document.getElementById("samurai-images-container");
+      imgContainer.innerHTML = `
+        <!-- PLANSZA NIEROZWIĄZANA -->
+        ${imgUnsolved ? `
+        <div style="width: 100%; max-width: 500px; position: relative;">
+          <h3 style="color: var(--primary-color); margin-bottom: 10px;">Plansza nierozwiązana</h3>
+          <img src="${imgUnsolved}" alt="Samurai Nierozwiązane" 
+               style="width: 100%; border-radius: 12px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; box-shadow: ${darkMode ? '0 18px 40px rgba(0,0,0,.75)' : '0 18px 40px rgba(0,0,0,.35)'}; cursor: zoom-in; ${darkMode ? 'filter: brightness(.9);' : ''}" 
+               onclick="document.getElementById('zoom-samurai-unsolved').style.display='flex';">
+        </div>
+        
+        <!-- Lightbox Nierozwiązana -->
+        <div id="zoom-samurai-unsolved" style="display: none; position: fixed; inset: 0; z-index: 9999; justify-content: center; align-items: center; background: ${darkMode ? 'rgba(0,0,0,.95)' : 'rgba(255,255,255,.95)'}; backdrop-filter: blur(4px);" onclick="this.style.display='none';">
+          <img src="${imgUnsolved}" style="max-width: 96%; max-height: 96%; border-radius: 16px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; ${darkMode ? 'filter: brightness(.9);' : ''} cursor: zoom-out;">
+        </div>
+        ` : ``}
+
+        <!-- PLANSZA ROZWIĄZANA -->
+        ${imgSolved ? `
+        <div style="width: 100%; max-width: 500px; position: relative;">
+          <h3 style="color: var(--secondary-color); margin-bottom: 10px;">Plansza rozwiązana</h3>
+          <img src="${imgSolved}" alt="Samurai Rozwiązanie" 
+               style="width: 100%; border-radius: 12px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; box-shadow: ${darkMode ? '0 18px 40px rgba(0,0,0,.75)' : '0 18px 40px rgba(0,0,0,.35)'}; cursor: zoom-in; ${darkMode ? 'filter: brightness(.9);' : ''}" 
+               onclick="document.getElementById('zoom-samurai-solved').style.display='flex';">
+        </div>
+
+        <!-- Lightbox Rozwiązana -->
+        <div id="zoom-samurai-solved" style="display: none; position: fixed; inset: 0; z-index: 9999; justify-content: center; align-items: center; background: ${darkMode ? 'rgba(0,0,0,.95)' : 'rgba(255,255,255,.95)'}; backdrop-filter: blur(4px);" onclick="this.style.display='none';">
+          <img src="${imgSolved}" style="max-width: 96%; max-height: 96%; border-radius: 16px; border: 1px solid ${darkMode ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)'}; ${darkMode ? 'filter: brightness(.9);' : ''} cursor: zoom-out;">
+        </div>
+        ` : ``}
+      `;
     } else if (typeRaw === "sudoku10" || typeRaw === "10" || typeRaw === "10x10") {
       activeSection = document.getElementById("sudoku10-info");
       showOnlySection(activeSection);
