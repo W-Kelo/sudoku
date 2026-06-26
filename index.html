@@ -1024,8 +1024,8 @@ function onSuccess(data) {
 
       // Hiperłącza do sekcji "Uwagi"
       let linksHtml = "";
-      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px; text-decoration:none;">Sudoku</a>`;
-      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
+      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:5px; text-decoration:none;">Sudoku,</a>`;
+      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
       document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków w bazie.";
 
       // Wyodrębnienie ID dysku, aby wczytać bezpośrednie zdjęcie (jak w 18x18)
