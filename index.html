@@ -448,7 +448,7 @@
       <div class="info-container" style="max-width: 600px; margin: 0 auto 20px auto; text-align: left;">
         <p><strong>Poziom trudności:</strong> <span id="samurai-new-difficulty"></span></p>
         <p><strong>Pochodzenie:</strong> <span id="samurai-new-origin"></span></p>
-        <p><strong>Uwagi:</strong> <span id="samurai-new-notes"></span></p>
+        <p><strong>Pobierz:</strong> <span id="samurai-new-notes"></span></p>
       </div>
       <div class="rating-container" style="display: none;">
         <h3>Oceń łamigłówkę:</h3>
@@ -1009,7 +1009,7 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudokusm89-info");
       showOnlySection(activeSection);
       setCommon("sudokusm89-origin", "sudokusm89-link", data.origin, data.notes);
-      } else if (typeRaw === "samurai") {
+     } else if (typeRaw === "samurai") {
       activeSection = document.getElementById("samurai-new-info");
       showOnlySection(activeSection);
       
@@ -1017,33 +1017,44 @@ function onSuccess(data) {
       document.getElementById("samurai-new-difficulty").innerText = data.code || "Brak informacji";
       document.getElementById("samurai-new-origin").innerText = data.origin || "Brak informacji";
       
-      // Rozdzielenie linków dysku Google z kolumny Uwagi (E)
+      // Rozdzielenie linków z kolumny E (rozdzielonych średnikiem)
       const notesParts = (data.notes || "").split(";");
-      const urlUnsolved = notesParts[0] ? notesParts[0].trim() : "";
-      const urlSolved = notesParts.length > 1 ? notesParts[1].trim() : "";
+      const rawUrlUnsolved = notesParts[0] ? notesParts[0].trim() : "";
+      const rawUrlSolved = notesParts.length > 1 ? notesParts[1].trim() : "";
 
-      // Hiperłącza do sekcji "Uwagi"
-      let linksHtml = "";
-      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:5px; text-decoration:none;">Sudoku,</a>`;
-      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
-      document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków w bazie.";
-
-      // Wyodrębnienie ID dysku, aby wczytać bezpośrednie zdjęcie (jak w 18x18)
-      function extractDriveImgUrl(url) {
-        if (!url) return "";
+      // Funkcja wyciągająca samo ID z jakiegokolwiek linku Google Drive
+      function getGoogleDriveId(url) {
+        if (!url) return null;
         let fileId = null;
         const patterns = [/\/d\/([^/]+)\//, /id=([^&]+)/, /\/d\/([^/?#]+)$/, /([A-Za-z0-9_-]{20,})/];
         for (const p of patterns) {
           const m = url.match(p);
           if (m && m[1]) { fileId = m[1]; break; }
         }
-        return fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : "";
+        return fileId;
       }
 
-      const imgUnsolved = extractDriveImgUrl(urlUnsolved);
-      const imgSolved = extractDriveImgUrl(urlSolved);
+      const idUnsolved = getGoogleDriveId(rawUrlUnsolved);
+      const idSolved = getGoogleDriveId(rawUrlSolved);
 
-      // Wykrywanie trybu ciemnego systemu dla estetyki Lightboxa (jak w 18x18)
+      // Budowanie specjalnych hiperłączy wymuszających automatyczne pobieranie pliku z Dysku
+      let linksHtml = "";
+      if (idUnsolved) {
+        const downloadUrlUnsolved = `https://drive.google.com/uc?export=download&id=${idUnsolved}`;
+        linksHtml += `<a href="${downloadUrlUnsolved}" style="color:var(--primary-color); font-weight:bold; margin-right:15px; text-decoration:none;">Sudoku</a>`;
+      }
+      if (idSolved) {
+        const downloadUrlSolved = `https://drive.google.com/uc?export=download&id=${idSolved}`;
+        linksHtml += `<a href="${downloadUrlSolved}" style="color:var(--primary-color); font-weight:bold; text-decoration:none;">Rozwiązanie</a>`;
+      }
+      
+      document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak plików do pobrania.";
+
+      // Źródła obrazów dla wyświetlania i Lightboxa (używamy serwera podglądu lh3)
+      const imgUnsolved = idUnsolved ? `https://lh3.googleusercontent.com/u/0/d/${idUnsolved}` : "";
+      const imgSolved = idSolved ? `https://lh3.googleusercontent.com/u/0/d/${idSolved}` : "";
+
+      // Wykrywanie trybu ciemnego systemu dla estetyki Lightboxa
       const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       
       // Wstrzykiwanie obrazów i okienek Lightbox do HTML
