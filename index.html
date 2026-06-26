@@ -437,7 +437,49 @@
   <p class="rating-message error-message"></p>
 </div>
     </div>
-    
+    <div id="samurai-new-info" style="display: none; width: 100%;">
+      <h2>Sudoku Samurajskie</h2>
+      <p>Wprowadzony kod dotyczy sudoku z zeszytu <span id="samurai-new-origin"></span>.</p>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 30px; margin-top: 20px;">
+        <!-- Nierozwiązana -->
+        <div style="width: 100%; max-width: 600px;">
+          <h3 style="color: var(--primary-color); margin-bottom: 10px;">Plansza nierozwiązana</h3>
+          <img id="samurai-img-unsolved" src="" alt="Plansza nierozwiązana" style="width: 100%; border-radius: 12px; border: 1px solid #ccc; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+        </div>
+        
+        <!-- Rozwiązana -->
+        <div style="width: 100%; max-width: 600px;">
+          <h3 style="color: var(--secondary-color); margin-bottom: 10px;">Plansza rozwiązana</h3>
+          <img id="samurai-img-solved" src="" alt="Plansza rozwiązana" style="width: 100%; border-radius: 12px; border: 1px solid #ccc; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+        </div>
+      </div>
+
+      <div class="info-container" style="text-align: center; margin-top: 25px;">
+        <p><strong>Uwagi:</strong> <span id="samurai-new-notes"></span></p>
+      </div>
+
+      <div class="rating-container" style="display: none;">
+        <h3>Oceń łamigłówkę:</h3>
+        <div class="rating-section">
+          <p><strong>Trudność:</strong> <span class="current-difficulty-rating">Brak ocen</span></p>
+          <div class="rating-input-container">
+            <input type="range" min="1" max="10" value="5" class="slider difficulty-slider">
+            <span class="difficulty-value">5</span>
+            <button onclick="submitRating('difficulty')" class="rating-button">Oceń</button>
+          </div>
+        </div>
+        <div class="rating-section">
+          <p><strong>Interesująca:</strong> <span class="current-interest-rating">Brak ocen</span></p>
+          <div class="rating-input-container">
+            <input type="range" min="1" max="10" value="5" class="slider interest-slider">
+            <span class="interest-value">5</span>
+            <button onclick="submitRating('interest')" class="rating-button">Oceń</button>
+          </div>
+        </div>
+        <p class="rating-message error-message"></p>
+      </div>
+    </div>
     <div id="konkurs-info" style="display: none;">
   <!-- WIDOK KOŁA FORTUNY -->
   <div id="view-fortune" style="display: none;">
@@ -887,7 +929,7 @@ function onSuccess(data) {
   }
 
   // lista sekcji (pewne ukrycie)
-  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku10-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info"];
+  const sectionIds = ["sudoku-container","word-search-info","cypher-puzzle-info","sudoku10-info","sudokusm89-info","konkurs-info","wbudowana-sonda-rozmiaru-planszy-info","samurai-new-info"];
 
   // ------------- RESET: ukryj wszystkie sekcje i usuń diagnostyczne node'y -------------
   sectionIds.forEach(id => {
@@ -976,6 +1018,39 @@ function onSuccess(data) {
       activeSection = document.getElementById("sudokusm89-info");
       showOnlySection(activeSection);
       setCommon("sudokusm89-origin", "sudokusm89-link", data.origin, data.notes);
+      } else if (typeRaw === "samurai") {
+      activeSection = document.getElementById("samurai-new-info");
+      showOnlySection(activeSection);
+      
+      document.getElementById("samurai-new-origin").innerText = data.origin || "Brak informacji";
+      
+      // Parsowanie linków z kolumny E rozdzielonych średnikiem
+      const notesParts = (data.notes || "").split(";");
+      const urlUnsolved = notesParts[0] ? notesParts[0].trim() : "";
+      const urlSolved = notesParts.length > 1 ? notesParts[1].trim() : "";
+
+      // Funkcja zamieniająca standardowy link dysku na link do bezpośredniego podglądu obrazu (jak w 18x18)
+      function extractDriveImgUrl(url) {
+        if (!url) return "";
+        let fileId = null;
+        const patterns = [/\/d\/([^/]+)\//, /id=([^&]+)/, /\/d\/([^/?#]+)$/];
+        for (const p of patterns) {
+          const m = url.match(p);
+          if (m && m[1]) { fileId = m[1]; break; }
+        }
+        return fileId ? `https://lh3.googleusercontent.com/u/0/d/${fileId}` : url;
+      }
+
+      // Ustawienie źródeł obrazów
+      document.getElementById("samurai-img-unsolved").src = extractDriveImgUrl(urlUnsolved);
+      document.getElementById("samurai-img-solved").src = extractDriveImgUrl(urlSolved);
+
+      // Budowanie linków dla sekcji "Uwagi"
+      let linksHtml = "";
+      if (urlUnsolved) linksHtml += `<a href="${urlUnsolved}" target="_blank" style="color:var(--primary-color); font-weight:bold; margin-right:15px;">🔗 Zobacz nierozwiązaną</a>`;
+      if (urlSolved) linksHtml += `<a href="${urlSolved}" target="_blank" style="color:var(--secondary-color); font-weight:bold;">🔗 Zobacz rozwiązaną</a>`;
+      
+      document.getElementById("samurai-new-notes").innerHTML = linksHtml || "Brak linków.";
     } else if (typeRaw === "sudoku10" || typeRaw === "10" || typeRaw === "10x10") {
       activeSection = document.getElementById("sudoku10-info");
       showOnlySection(activeSection);
@@ -3118,6 +3193,7 @@ function enableRatingButtons(section) {
 //    document.getElementById("sudoku16-info").style.display = "none";
     document.getElementById("sudoku10-info").style.display = "none";
     document.getElementById("sudokusm89-info").style.display = "none";
+    document.getElementById("samurai-new-info").style.display = "none";
     document.getElementById("konkurs-info").style.display = "none";
     document.getElementById("wbudowana-sonda-rozmiaru-planszy-info").style.display = "none";
     document.getElementById("error-message").innerText = "Błąd: " + error.message;
@@ -3140,6 +3216,8 @@ function enableRatingButtons(section) {
  //     case 'sudoku16': return { name: 'Sudoku 16*16' };
       case 'sudoku10': return { name: 'Sudoku 10x10' };
       case 'sudokusm89': return { name: 'Sudoku samurajskie' };
+     case 'samurai': return { name: 'Sudoku Samurajskie' }; 
+
       case 'konkurs': return { name: 'Konkurs' };
       case 'wbudowana-sonda-rozmiaru-planszy': return { name: 'wbudowana-sonda-rozmiaru-planszy' };
       default: return { name: 'Łamigłówka' };
