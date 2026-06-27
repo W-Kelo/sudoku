@@ -3045,17 +3045,19 @@ function renderSudoku8(boardString, containerId, isSolution = false) {
     table.appendChild(tr);
   });
 
-  if (!isSolution && containerId === "initial-sudoku-table") {
-    addSolveButton8(board);
+      if (!isSolution && containerId === "initial-sudoku-table") {
+  addSolveButton8(board);
   }
 }
 
-function addSolveButton8(board) {
+ function addSolveButton8(board) {
+
+ // if (!isDesktop()) return;
+
   const container = document.getElementById("sudoku-container");
   if (!container) return;
 
-  // Usuwamy stary przycisk, aby go nie zduplikować
-  const old = document.getElementById("solve8btn");
+  const old = document.getElementById("solve9btn");
   if (old) old.remove();
 
   const btn = document.createElement("button");
@@ -3064,16 +3066,15 @@ function addSolveButton8(board) {
   btn.textContent = "Rozwiąż w nowej karcie, wersja beta";
 
   btn.onclick = () => {
-    // Przekazanie aktualnej planszy 8x8 (w formacie JSON) przez URL
-    const url = "sudoku8solve.html?board=" + encodeURIComponent(JSON.stringify(board));
+    const url =
+      "sudoku8solve.html?board=" + encodeURIComponent(JSON.stringify(board));
     window.open(url, "_blank");
   };
 
-  // Dodanie przycisku pod odpowiednią planszą (w domyśle table nierozwiązana ma to ID)
-  const targetTable = document.getElementById("initial-sudoku-table-8x8");
-  if (targetTable) {
-    targetTable.insertAdjacentElement("afterend", btn);
-  }
+  // tylko pod NIERozwiązaną
+  document
+    .getElementById("initial-sudoku-table")
+    .insertAdjacentElement("afterend", btn);
 }
 // ---------------------- solver ------------------------------------
 
