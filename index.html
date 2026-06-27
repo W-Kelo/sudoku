@@ -3040,14 +3040,41 @@ function renderSudoku8(boardString, containerId, isSolution = false) {
         td.style.borderBottom = "3px solid #000";
       }
 
-      tr.appendChild(td);
+           tr.appendChild(td);
     });
-
     table.appendChild(tr);
   });
+
+  if (!isSolution && containerId === "initial-sudoku-table-8x8") {
+    addSolveButton8(board);
+  }
 }
 
+function addSolveButton8(board) {
+  const container = document.getElementById("sudoku-container");
+  if (!container) return;
 
+  // Usuwamy stary przycisk, aby go nie zduplikować
+  const old = document.getElementById("solve8btn");
+  if (old) old.remove();
+
+  const btn = document.createElement("button");
+  btn.id = "solve8btn";
+  btn.className = "open-new-tab-btn-2";
+  btn.textContent = "Rozwiąż w nowej karcie, wersja beta";
+
+  btn.onclick = () => {
+    // Przekazanie aktualnej planszy 8x8 (w formacie JSON) przez URL
+    const url = "sudoku8solve.html?board=" + encodeURIComponent(JSON.stringify(board));
+    window.open(url, "_blank");
+  };
+
+  // Dodanie przycisku pod odpowiednią planszą (w domyśle table nierozwiązana ma to ID)
+  const targetTable = document.getElementById("initial-sudoku-table-8x8");
+  if (targetTable) {
+    targetTable.insertAdjacentElement("afterend", btn);
+  }
+}
 // ---------------------- solver ------------------------------------
 
 function isValid8(board, row, col, num) {
